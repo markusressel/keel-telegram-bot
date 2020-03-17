@@ -169,4 +169,4 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-/keel_telegram_bot.*
+/keel-telegram-bot.*

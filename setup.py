@@ -60,30 +60,28 @@ def locked_requirements(section):
 
 
 setup(
-    name='grocy-telegram-bot',
+    name='keel-telegram-bot',
     version=VERSION_NAME,
-    description='A telegram bot to interact with grocy',
+    description='A telegram bot for keel.sh',
     long_description=readme(),
     long_description_content_type=readme_type(),
     license='AGPLv3+',
     author='Markus Ressel',
     author_email='mail@markusressel.de',
-    url='https://github.com/markusressel/grocy-telegram-bot',
+    url='https://github.com/markusressel/keel-telegram-bot',
     packages=find_packages(),
     # python_requires='>=3.4',
     classifiers=[
         DEVELOPMENT_STATUS,
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8'
     ],
     install_requires=locked_requirements('default'),
     tests_require=locked_requirements('develop'),
     entry_points={
         'console_scripts': [
-            'grocy-telegram-bot = grocy_telegram_bot.main:main'
+            'keel-telegram-bot = keel_telegram_bot.main:main'
         ]
     }
 )
