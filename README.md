@@ -1,4 +1,4 @@
-# keel-telegram-bot [![Build Status](https://travis-ci.com/markusressel/grocy-telegram-bot.svg?branch=master)](https://travis-ci.com/markusressel/grocy-telegram-bot) [![PyPI version](https://badge.fury.io/py/grocy-telegram-bot.svg)](https://badge.fury.io/py/grocy-telegram-bot)
+# keel-telegram-bot [![Build Status](https://travis-ci.com/markusressel/keel-telegram-bot.svg?branch=master)](https://travis-ci.com/markusressel/keel-telegram-bot) [![PyPI version](https://badge.fury.io/py/keel-telegram-bot.svg)](https://badge.fury.io/py/keel-telegram-bot)
 
 **keel-telegram-bot** is a webhook proxy used to send webhook messages to 
 telegram chats.
@@ -46,7 +46,7 @@ sudo docker run -t \
 ```
 
 Configure the image using either environment variables, or mount the configuration
-file from your host system to `/app/keel_telegram_bot.yaml`.
+file from your host system to `/app/keel-telegram-bot.yaml`.
 
 # Contributing
 
