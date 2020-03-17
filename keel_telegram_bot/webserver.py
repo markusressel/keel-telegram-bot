@@ -12,8 +12,9 @@ app = Flask(__name__)
 @app.route('/<path:path>', methods=['GET', 'POST'])
 def catch_all(path: str = None):
     # TODO: handle incoming requests, specifically from Keel
-    data = json.loads(request.data)
-    WebsocketServer.bot.notify(data)
+    if request.data is not None:
+        data = json.loads(request.data)
+        WebsocketServer.bot.notify(data)
     return "OK"
 
 
