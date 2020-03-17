@@ -139,7 +139,7 @@ class KeelTelegramBot:
     @command(name=COMMAND_APPROVE,
              description="Approve a pending item",
              arguments=[
-                 Argument(name=["identifier", "id"], description="Approval identifier",
+                 Argument(name=["identifier", "i"], description="Approval identifier",
                           example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
@@ -171,7 +171,7 @@ class KeelTelegramBot:
     @command(name=COMMAND_REJECT,
              description="Reject a pending item",
              arguments=[
-                 Argument(name=["identifier", "id"], description="Approval identifier",
+                 Argument(name=["identifier", "i"], description="Approval identifier",
                           example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
@@ -203,7 +203,7 @@ class KeelTelegramBot:
     @command(name=COMMAND_DELETE,
              description="Delete an approval item",
              arguments=[
-                 Argument(name=["identifier", "id"], description="Approval identifier",
+                 Argument(name=["identifier", "i"], description="Approval identifier",
                           example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
