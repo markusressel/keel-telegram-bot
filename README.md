@@ -1,11 +1,13 @@
 # keel-telegram-bot [![Build Status](https://travis-ci.com/markusressel/keel-telegram-bot.svg?branch=master)](https://travis-ci.com/markusressel/keel-telegram-bot) [![PyPI version](https://badge.fury.io/py/keel-telegram-bot.svg)](https://badge.fury.io/py/keel-telegram-bot)
 
-**keel-telegram-bot** is a webhook proxy used to send webhook messages to 
-telegram chats.
+**keel-telegram-bot** is a telegram bot for [Keel](https://keel.sh/).
 
-# How it works
+# Features
 
-TODO
+* [ ] Receive notifications (via Webhook)
+* [ ] List pending approvals
+* [ ] Approve pending approvals
+* [ ] Reject pending approvals
 
 # How to use
 
