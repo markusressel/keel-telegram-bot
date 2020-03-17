@@ -73,3 +73,43 @@ def fuzzy_match(term: str, choices: List[Any], limit: int = None, key=lambda x: 
     result = list(map(lambda x: (key_map[x[0]], x[1]), matches))
 
     return result
+
+
+def filter_new_by_key(a: List, b: List, key: callable) -> List:
+    """
+    Returns a list of all items, that are new in b when compared to a,
+    using the key function to determine a unique identifier for list items
+    :param a: "old" list
+    :param b: "new" list
+    :param key: function to map list items to a unique identifier
+    :return: new list items
+    """
+    a_ids = set(map(key, a))
+    b_ids = set(map(key, b))
+    new_ids = b_ids - a_ids
+
+    result = []
+    for id in new_ids:
+        item_in_b = list(filter(lambda x: key(x) == id, b))[0]
+        result.append(item_in_b)
+    return result
+
+
+def approval_to_str(data: dict) -> str:
+    identifier = data["identifier"]
+    current_version = data["currentVersion"]
+    new_version = data["newVersion"]
+    votes_required = data["votesRequired"]
+    votes_received = data["votesReceived"]
+    deadline = data["deadline"]
+    message = data["message"]
+
+    text = "\n".join([
+        identifier,
+        f"Version: {current_version} -> {new_version}",
+        f"Message: {message}",
+        f"Votes: {votes_received}/{votes_required}",
+        f"Deadline: {deadline}"
+    ])
+
+    return text

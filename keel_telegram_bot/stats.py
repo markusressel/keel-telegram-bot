@@ -10,6 +10,9 @@ COMMAND_TIME_APPROVE = COMMAND_TIME.labels(command=COMMAND_APPROVE[0])
 COMMAND_TIME_REJECT = COMMAND_TIME.labels(command=COMMAND_REJECT[0])
 COMMAND_TIME_DELETE = COMMAND_TIME.labels(command=COMMAND_DELETE[0])
 
+WATCHER_TIME = Summary('watcher_processing_seconds', 'Time spent in a watcher', ['type'])
+APPROVAL_WATCHER_TIME = WATCHER_TIME.labels(type="approval")
+
 
 def get_metrics() -> []:
     entries = set()

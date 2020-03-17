@@ -12,7 +12,7 @@ from keel_telegram_bot.permissions import CONFIG_ADMINS
 from keel_telegram_bot.reply_keyboard_handler import ReplyKeyboardHandler
 from keel_telegram_bot.stats import COMMAND_TIME_START, COMMAND_TIME_LIST_APPROVALS, COMMAND_TIME_APPROVE, \
     COMMAND_TIME_REJECT, COMMAND_TIME_DELETE
-from keel_telegram_bot.util import send_message
+from keel_telegram_bot.util import send_message, approval_to_str
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class KeelTelegramBot:
         self._response_handler = ReplyKeyboardHandler()
 
         self._updater = Updater(token=self._config.TELEGRAM_BOT_TOKEN.value, use_context=True)
-        LOGGER.debug("Using bot id '{}' ({})".format(self._updater.bot.id, self._updater.bot.name))
+        LOGGER.debug(f"Using bot id '{self._updater.bot.id}' ({self._updater.bot.name})")
         self._dispatcher = self._updater.dispatcher
 
         handler_groups = {
@@ -75,25 +75,12 @@ class KeelTelegramBot:
             for handler in handlers:
                 self._updater.dispatcher.add_handler(handler, group=group)
 
-    def notify(self, data: dict):
-        identifier = data.get("identifier", None)
-        title = data.get("name", None)
-        type = data.get("type", None)
-        level = data.get("level", None)  # success/failure
-        message = data.get("message", None)
-
-        text = "\n".join([
-            f"**{title}: {level}**",
-            f"{identifier}",
-            f"{type}",
-            f"{message}",
-        ])
+    def notify(self, message: str):
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
             send_message(
-                self.bot,
-                chat_id,
-                text,
-                ParseMode.MARKDOWN)
+                self.bot, chat_id,
+                message, parse_mode=ParseMode.MARKDOWN
+            )
 
     @property
     def bot(self):
@@ -150,9 +137,9 @@ class KeelTelegramBot:
         if len(items) <= 0:
             text = "No pending approvals"
         else:
-            items = list(map(lambda x: f"{x['identifier']} ({x['votesReceived']}/{x['votesRequired']})", items))
+            items = list(map(approval_to_str, items))
             text = "\n".join(items)
-        send_message(bot, chat_id, text, reply_to=message.message_id)
+        send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode=ParseMode.MARKDOWN)
 
     @COMMAND_TIME_APPROVE.time()
     @command(name=COMMAND_APPROVE,
@@ -178,7 +165,7 @@ class KeelTelegramBot:
 
             self._api_client.approve(item["id"], item["identifier"], voter)
             text = "Success"
-            send_message(bot, chat_id, text, reply_to=message.message_id)
+            send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode=ParseMode.MARKDOWN)
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
         self._response_handler.await_user_selection(
@@ -190,8 +177,7 @@ class KeelTelegramBot:
     @command(name=COMMAND_REJECT,
              description="Reject a pending item",
              arguments=[
-                 Argument(name=["identifier", "i"], description="Approval identifier",
-                          example="default/myimage:1.5.5"),
+                 Argument(name=["identifier", "i"], description="Approval identifier", example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
              permissions=CONFIG_ADMINS)
@@ -210,7 +196,7 @@ class KeelTelegramBot:
 
             self._api_client.reject(item["id"], item["identifier"], voter)
             text = "Success"
-            send_message(bot, chat_id, text, reply_to=message.message_id)
+            send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode=ParseMode.MARKDOWN)
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
         self._response_handler.await_user_selection(
@@ -222,8 +208,7 @@ class KeelTelegramBot:
     @command(name=COMMAND_DELETE,
              description="Delete an approval item",
              arguments=[
-                 Argument(name=["identifier", "i"], description="Approval identifier",
-                          example="default/myimage:1.5.5"),
+                 Argument(name=["identifier", "i"], description="Approval identifier", example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
              permissions=CONFIG_ADMINS)
@@ -242,9 +227,9 @@ class KeelTelegramBot:
 
             self._api_client.delete(item["id"], item["identifier"], voter)
             text = "Success"
-            send_message(bot, chat_id, text, reply_to=message.message_id)
+            send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode=ParseMode.MARKDOWN)
 
-        items = self._api_client.get_approvals(archived=True)
+        items = self._api_client.get_approvals()
         self._response_handler.await_user_selection(
             update, context, identifier, choices=items, key=lambda x: x["identifier"],
             callback=execute,
