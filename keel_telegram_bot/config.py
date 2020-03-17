@@ -71,6 +71,20 @@ class Config(ConfigBase):
         ]
     )
 
+    TELEGRAM_CHAT_IDS = ListConfigEntry(
+        item_type=StringConfigEntry,
+        key_path=[
+            NODE_MAIN,
+            NODE_TELEGRAM,
+            "chat_ids"
+        ],
+        required=True,
+        example=[
+            12345678,
+            87654321
+        ]
+    )
+
     KEEL_HOST = StringConfigEntry(
         description="Hostname of the keel HTTP endpoint",
         key_path=[
@@ -122,17 +136,6 @@ class Config(ConfigBase):
         ],
         required=True,
         secret=True
-    )
-
-    # TODO: is this even needed?
-    KEEL_WEBHOOK = StringConfigEntry(
-        description="Webhook url for keel notifications",
-        key_path=[
-            NODE_MAIN,
-            NODE_KEEL,
-            NODE_WEBHOOK
-        ],
-        required=True
     )
 
     STATS_ENABLED = BoolConfigEntry(

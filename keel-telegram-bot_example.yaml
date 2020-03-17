@@ -6,12 +6,14 @@ keel-telegram-bot:
     ssl: true
     username: myuser
     password: mypassword
-    webhook: https://my.domain.com:12345/webhook
   telegram:
     admin_usernames:
       - myadminuser
       - myotheradminuser
     bot_token: 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
+    chat_ids:
+      - 12345678
+      - 87654321
   stats:
     enabled: true
     port: 8000

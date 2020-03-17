@@ -8,7 +8,7 @@ from prometheus_client import start_http_server
 from keel_telegram_bot.api_client import KeelApiClient
 from keel_telegram_bot.bot import KeelTelegramBot
 from keel_telegram_bot.config import Config
-from keel_telegram_bot.webserver import app
+from keel_telegram_bot.webserver import WebsocketServer
 
 parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
 sys.path.append(parent_dir)
@@ -40,7 +40,8 @@ def main():
     bot = KeelTelegramBot(config, api_client)
     bot.start()
 
-    app.run()
+    server = WebsocketServer(config, bot)
+    server.run()
 
 
 if __name__ == '__main__':

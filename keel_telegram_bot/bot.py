@@ -75,6 +75,26 @@ class KeelTelegramBot:
             for handler in handlers:
                 self._updater.dispatcher.add_handler(handler, group=group)
 
+    def notify(self, data: dict):
+        identifier = data.get("identifier", None)
+        title = data.get("name", None)
+        type = data.get("type", None)
+        level = data.get("level", None)  # success/failure
+        message = data.get("message", None)
+
+        text = "\n".join([
+            f"**{title}: {level}**",
+            f"{identifier}",
+            f"{type}",
+            f"{message}",
+        ])
+        for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
+            send_message(
+                self.bot,
+                chat_id,
+                text,
+                ParseMode.MARKDOWN)
+
     @property
     def bot(self):
         return self._updater.bot
@@ -84,7 +104,6 @@ class KeelTelegramBot:
         Starts up the bot.
         """
         self._updater.start_polling()
-        self._updater.idle()
 
     def stop(self):
         """
