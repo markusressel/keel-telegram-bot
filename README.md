@@ -4,10 +4,11 @@
 
 # Features
 
-* [ ] Receive notifications (via Webhook)
-* [ ] List pending approvals
-* [ ] Approve pending approvals
-* [ ] Reject pending approvals
+* [x] Receive notifications (via Webhook)
+* [x] List approvals
+* [x] Approve pending approvals
+* [x] Reject pending approvals
+* [x] Delete archived approvals
 
 # How to use
 
@@ -49,6 +50,22 @@ sudo docker run -t \
 
 Configure the image using either environment variables, or mount the configuration
 file from your host system to `/app/keel-telegram-bot.yaml`.
+
+## Setup
+
+This bot uses the REST api provided by Keel to interact with it
+and relies on the Webhook functionality to receive and forward notifications
+to telegram chats. On one hand **keel-telegram-bot** acts like the web 
+interface, on the other hand it acts like a proxy, both combined into a 
+single package.
+
+To get the commands working simply provide all the necessary details of
+the configuration file.
+
+To get notifications working you will have to provide the address of 
+**keel-telegram-bot** to Keel using the `WEBHOOK_ENDPOINT` env variable.
+The simplest way to achieve this is by running both Keel and **keel-telegram-bot**
+on the same host and specifying `http://localhost:5000/`.
 
 # Contributing
 
