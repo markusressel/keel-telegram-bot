@@ -105,9 +105,9 @@ def approval_to_str(data: dict) -> str:
     message = data["message"]
 
     text = "\n".join([
-        identifier,
+        f"**>> **{message}",
+        f"Identifier: {identifier}",
         f"Version: {current_version} -> {new_version}",
-        f"Message: {message}",
         f"Votes: {votes_received}/{votes_required}",
         f"Deadline: {deadline}"
     ])
