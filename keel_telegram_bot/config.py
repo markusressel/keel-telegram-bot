@@ -93,6 +93,37 @@ class Config(ConfigBase):
         required=True
     )
 
+    KEEL_SSL = BoolConfigEntry(
+        description="Whether to use HTTPS or not",
+        key_path=[
+            NODE_MAIN,
+            NODE_KEEL,
+            "ssl"
+        ],
+        default=True
+    )
+
+    KEEL_USER = StringConfigEntry(
+        description="Keel basic auth username",
+        key_path=[
+            NODE_MAIN,
+            NODE_KEEL,
+            "username"
+        ],
+        required=True
+    )
+
+    KEEL_PASSWORD = StringConfigEntry(
+        description="Keel basic auth password",
+        key_path=[
+            NODE_MAIN,
+            NODE_KEEL,
+            "password"
+        ],
+        required=True,
+        secret=True
+    )
+
     # TODO: is this even needed?
     KEEL_WEBHOOK = StringConfigEntry(
         description="Webhook url for keel notifications",

@@ -5,6 +5,8 @@ import sys
 from container_app_conf.formatter.toml import TomlFormatter
 from prometheus_client import start_http_server
 
+from keel_telegram_bot.api_client import KeelApiClient
+from keel_telegram_bot.bot import KeelTelegramBot
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.webserver import app
 
@@ -27,8 +29,16 @@ def main():
     if config.STATS_ENABLED.value:
         start_http_server(config.STATS_PORT.value)
 
-    # bot = KeelTelegramBot(config)
-    # bot.start()
+    api_client = KeelApiClient(
+        config.KEEL_HOST.value,
+        config.KEEL_PORT.value,
+        config.KEEL_SSL.value,
+        config.KEEL_USER.value,
+        config.KEEL_PASSWORD.value,
+    )
+
+    bot = KeelTelegramBot(config, api_client)
+    bot.start()
 
     app.run()
 

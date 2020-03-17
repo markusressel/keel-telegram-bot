@@ -1,9 +1,12 @@
+import json
 import logging
 
 from telegram import Update, ParseMode
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, CallbackContext
+from telegram_click.argument import Argument
 from telegram_click.decorator import command
 
+from keel_telegram_bot.api_client import KeelApiClient
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.const import *
 from keel_telegram_bot.permissions import CONFIG_ADMINS
@@ -19,12 +22,13 @@ class KeelTelegramBot:
     The main entry class of the keel telegram bot
     """
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, api_client: KeelApiClient):
         """
         Creates an instance.
         :param config: configuration object
         """
         self._config = config
+        self._api_client = api_client
 
         self._updater = Updater(token=self._config.TELEGRAM_BOT_TOKEN.value, use_context=True)
         LOGGER.debug("Using bot id '{}' ({})".format(self._updater.bot.id, self._updater.bot.name))
@@ -104,27 +108,67 @@ class KeelTelegramBot:
         """
         List pending approvals
         """
-        raise NotImplementedError()
+        bot = context.bot
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+
+        items = self._api_client.get_pending_approvals()
+        if len(items) <= 0:
+            text = "No pending approvals"
+        else:
+            items = list(map(json.dumps, items))
+            text = "\n".join(items)
+        send_message(bot, chat_id, text, reply_to=message.message_id)
 
     @COMMAND_TIME_APPROVE.time()
     @command(name=COMMAND_TIME_APPROVE,
              description="Approve a pending item",
+             arguments=[
+                 Argument(name=["identifier", "id"], description="Approval identifier",
+                          example="default/myimage:1.5.5"),
+                 Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
+             ],
              permissions=CONFIG_ADMINS)
-    def _approve_callback(self, update: Update, context: CallbackContext) -> None:
+    def _approve_callback(self, update: Update, context: CallbackContext,
+                          identifier: str, voter: str or None) -> None:
         """
         Approve a pending item
         """
-        raise NotImplementedError()
+        bot = context.bot
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+
+        if voter is None:
+            voter = update.effective_user.full_name
+
+        self._api_client.approve(identifier, voter)
+        text = "Success"
+        send_message(bot, chat_id, text, reply_to=message.message_id)
 
     @COMMAND_TIME_REJECT.time()
     @command(name=COMMAND_TIME_REJECT,
              description="Reject a pending item",
+             arguments=[
+                 Argument(name=["identifier", "id"], description="Approval identifier",
+                          example="default/myimage:1.5.5"),
+                 Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
+             ],
              permissions=CONFIG_ADMINS)
-    def _reject_callback(self, update: Update, context: CallbackContext) -> None:
+    def _reject_callback(self, update: Update, context: CallbackContext,
+                         identifier: str, voter: str or None) -> None:
         """
         Reject a pending item
         """
-        raise NotImplementedError()
+        bot = context.bot
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+
+        if voter is None:
+            voter = update.effective_user.full_name
+
+        self._api_client.reject(identifier, voter)
+        text = "Success"
+        send_message(bot, chat_id, text, reply_to=message.message_id)
 
     @command(
         name=COMMAND_HELP,

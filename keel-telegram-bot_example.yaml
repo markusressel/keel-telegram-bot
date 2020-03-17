@@ -3,6 +3,9 @@ keel-telegram-bot:
   keel:
     host: localhost
     port: 9300
+    ssl: true
+    username: myuser
+    password: mypassword
     webhook: https://my.domain.com:12345/webhook
   telegram:
     admin_usernames:
