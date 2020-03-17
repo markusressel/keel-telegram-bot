@@ -1,4 +1,3 @@
-import json
 import logging
 
 from telegram import Update, ParseMode
@@ -103,8 +102,13 @@ class KeelTelegramBot:
     @COMMAND_TIME_LIST_APPROVALS.time()
     @command(name=COMMAND_TIME_LIST_APPROVALS,
              description="List pending approvals",
+             arguments=[
+                 Argument(name=["rejected", "r"], description="Rejected", type=bool, example="true", optional=True),
+                 Argument(name=["archived", "a"], description="Archived", type=bool, example="true", optional=True),
+             ],
              permissions=CONFIG_ADMINS)
-    def _list_approvals_callback(self, update: Update, context: CallbackContext) -> None:
+    def _list_approvals_callback(self, update: Update, context: CallbackContext,
+                                 rejected: bool or None, archived: bool or None) -> None:
         """
         List pending approvals
         """
@@ -112,11 +116,11 @@ class KeelTelegramBot:
         message = update.effective_message
         chat_id = update.effective_chat.id
 
-        items = self._api_client.get_pending_approvals()
+        items = self._api_client.get_approvals(rejected, archived)
         if len(items) <= 0:
             text = "No pending approvals"
         else:
-            items = list(map(json.dumps, items))
+            items = list(map(lambda x: x["identifier"], items))
             text = "\n".join(items)
         send_message(bot, chat_id, text, reply_to=message.message_id)
 

@@ -1,7 +1,7 @@
 import functools
 import logging
 import operator
-from typing import List, Any
+from typing import List, Any, Tuple
 
 from telegram import Bot, Message, ReplyMarkup
 
@@ -47,3 +47,29 @@ def send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = None, r
     emojized_text = emojize(message, use_aliases=True)
     return bot.send_message(chat_id=chat_id, parse_mode=parse_mode, text=emojized_text, reply_to_message_id=reply_to,
                             reply_markup=menu)
+
+
+def fuzzy_match(term: str, choices: List[Any], limit: int = None, key=lambda x: x, ignorecase: bool = True) -> List[
+    Tuple[Any, int]]:
+    """
+    Does a fuzzy search on the given choices
+    :param term: the search term
+    :param choices: list of possible choices
+    :param key: function to turn a choice item into a string
+    :param limit: Optional maximum for the number of elements returned
+    :return: List of (choice, ratio) tuples, sorted by descending ratio
+    """
+    # map choices to key
+    if ignorecase:
+        term = term.casefold()
+    choices = filter(lambda x: key(x) is not None, choices)
+    key_map = dict(map(lambda x: (key(x).casefold() if ignorecase else key(x), x), choices))
+
+    from fuzzywuzzy import process
+    from fuzzywuzzy import fuzz
+    matches = process.extract(term, key_map.keys(), limit=limit, scorer=fuzz.UWRatio)
+
+    # map results back to original choices
+    result = list(map(lambda x: (key_map[x[0]], x[1]), matches))
+
+    return result

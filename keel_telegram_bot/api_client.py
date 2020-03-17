@@ -25,11 +25,20 @@ class KeelApiClient:
 
         self._base_url = f"{'https' if ssl else 'http'}://{host}:{port}"
 
-    def get_pending_approvals(self) -> List[dict]:
+    def get_approvals(self, rejected: bool = None, archived: bool = None) -> List[dict]:
         """
-        :return: a list of all pending approvals
+        :param rejected: True for rejected, False for approved, None for all
+        :param archived: True for archived, False for not archived, None for all
+        :return: a list of all approvals matching criteria
         """
-        return self._do_request(GET, self._base_url + "/v1/approvals")
+        response = self._do_request(GET, self._base_url + "/v1/approvals")
+
+        if rejected is not None:
+            response = list(filter(lambda x: x["rejected"] == rejected, response))
+        if archived is not None:
+            response = list(filter(lambda x: x["archived"] == archived, response))
+
+        return response
 
     def approve(self, identifier: str, voter: str) -> None:
         """
