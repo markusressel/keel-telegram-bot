@@ -1,0 +1,125 @@
+import logging
+import re
+
+from container_app_conf import ConfigBase
+from container_app_conf.entry.bool import BoolConfigEntry
+from container_app_conf.entry.int import IntConfigEntry
+from container_app_conf.entry.list import ListConfigEntry
+from container_app_conf.entry.string import StringConfigEntry
+from container_app_conf.source.env_source import EnvSource
+from container_app_conf.source.toml_source import TomlSource
+from container_app_conf.source.yaml_source import YamlSource
+
+NODE_MAIN = "keel-telegram-bot"
+
+NODE_TELEGRAM = "telegram"
+
+NODE_KEEL = "keel"
+NODE_HOST = "host"
+NODE_WEBHOOK = "webhook"
+
+NODE_STATS = "stats"
+NODE_ENABLED = "enabled"
+NODE_PORT = "port"
+
+
+class Config(ConfigBase):
+
+    def __new__(cls, *args, **kwargs):
+        yaml_source = YamlSource(NODE_MAIN)
+        toml_source = TomlSource(NODE_MAIN)
+        data_sources = [
+            EnvSource(),
+            yaml_source,
+            toml_source
+        ]
+        return super(Config, cls).__new__(cls, data_sources=data_sources)
+
+    LOG_LEVEL = StringConfigEntry(
+        description="Log level",
+        key_path=[
+            NODE_MAIN,
+            "log_level"
+        ],
+        regex=re.compile(f"{'|'.join(logging._nameToLevel.keys())}", flags=re.IGNORECASE),
+        default="WARNING",
+    )
+
+    TELEGRAM_BOT_TOKEN = StringConfigEntry(
+        description="The telegram bot token to use",
+        key_path=[
+            NODE_MAIN,
+            NODE_TELEGRAM,
+            "bot_token"
+        ],
+        example="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
+        secret=True,
+        required=True
+    )
+
+    TELEGRAM_ADMIN_USERNAMES = ListConfigEntry(
+        item_type=StringConfigEntry,
+        key_path=[
+            NODE_MAIN,
+            NODE_TELEGRAM,
+            "admin_usernames"
+        ],
+        required=True,
+        example=[
+            "myadminuser",
+            "myotheradminuser"
+        ]
+    )
+
+    KEEL_HOST = StringConfigEntry(
+        description="Hostname of the keel HTTP endpoint",
+        key_path=[
+            NODE_MAIN,
+            NODE_KEEL,
+            NODE_HOST
+        ],
+        default="localhost",
+        required=True
+    )
+
+    KEEL_PORT = IntConfigEntry(
+        description="Port of the keel HTTP endpoint",
+        key_path=[
+            NODE_MAIN,
+            NODE_KEEL,
+            NODE_PORT
+        ],
+        default=9300,
+        required=True
+    )
+
+    # TODO: is this even needed?
+    KEEL_WEBHOOK = StringConfigEntry(
+        description="Webhook url for keel notifications",
+        key_path=[
+            NODE_MAIN,
+            NODE_KEEL,
+            NODE_WEBHOOK
+        ],
+        required=True
+    )
+
+    STATS_ENABLED = BoolConfigEntry(
+        description="Whether to enable prometheus statistics or not.",
+        key_path=[
+            NODE_MAIN,
+            NODE_STATS,
+            NODE_ENABLED
+        ],
+        default=True
+    )
+
+    STATS_PORT = IntConfigEntry(
+        description="The port to expose statistics on.",
+        key_path=[
+            NODE_MAIN,
+            NODE_STATS,
+            NODE_PORT
+        ],
+        default=8000
+    )

@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+flask = ">=1.1.1"
+container-app-conf = ">=5.0.0"
+python-telegram-bot = ">=12"
+telegram-click = ">=3.3.4"
+emoji = "*"
+prometheus-client = "*"
+fuzzywuzzy = "*"
+python-Levenshtein = "*"
+
+[dev-packages]
+pytest = "*"
+
+[requires]
+python_version = "3.8"
