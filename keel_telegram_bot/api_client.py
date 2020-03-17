@@ -40,37 +40,43 @@ class KeelApiClient:
 
         return response
 
-    def approve(self, identifier: str, voter: str) -> None:
+    def approve(self, id: str, identifier: str, voter: str) -> None:
         """
         Approve a pending approval
+        :param id: item id
         :param identifier: identifier for the approval request, something like "default/myimage:1.5.5"
         :param voter: name of the voter
         """
         self._do_request(POST, self._base_url + "/v1/approvals", json={
+            "id": id,
             "identifier": identifier,
             "action": "approve",
             "voter": voter,
         })
 
-    def reject(self, identifier: str, voter: str) -> None:
+    def reject(self, id: str, identifier: str, voter: str) -> None:
         """
         Reject a pending approval
+        :param id: item id
         :param identifier: identifier for the approval request, something like "default/myimage:1.5.5"
         :param voter: name of the voter
         """
         self._do_request(POST, self._base_url + "/v1/approvals", json={
+            "id": id,
             "identifier": identifier,
             "action": "reject",
             "voter": voter,
         })
 
-    def delete(self, identifier: str, voter: str) -> None:
+    def delete(self, id: str, identifier: str, voter: str) -> None:
         """
         Delete a pending approval
+        :param id: item id
         :param identifier: identifier for the approval request, something like "default/myimage:1.5.5"
         :param voter: name of the voter
         """
         self._do_request(POST, self._base_url + "/v1/approvals", json={
+            "id": id,
             "identifier": identifier,
             "action": "delete",
             "voter": voter,
@@ -99,7 +105,7 @@ class KeelApiClient:
 
         response.raise_for_status()
         # some responses do not return data so we just ignore the body in that case
-        if len(response.content) > 0:
+        if len(response.content) > 0 and response.content != b"null":
             return response.json()
 
     @staticmethod
@@ -111,7 +117,6 @@ class KeelApiClient:
         :param params: query params as a keyed dictionary
         :return: the url including the given query params
         """
-
         if params:
             first_param = True
             for k, v in sorted(params.items(), key=lambda entry: entry[0]):

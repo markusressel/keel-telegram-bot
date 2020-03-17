@@ -9,8 +9,9 @@ from keel_telegram_bot.api_client import KeelApiClient
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.const import *
 from keel_telegram_bot.permissions import CONFIG_ADMINS
+from keel_telegram_bot.reply_keyboard_handler import ReplyKeyboardHandler
 from keel_telegram_bot.stats import COMMAND_TIME_START, COMMAND_TIME_LIST_APPROVALS, COMMAND_TIME_APPROVE, \
-    COMMAND_TIME_REJECT
+    COMMAND_TIME_REJECT, COMMAND_TIME_DELETE
 from keel_telegram_bot.util import send_message
 
 LOGGER = logging.getLogger(__name__)
@@ -29,9 +30,10 @@ class KeelTelegramBot:
         self._config = config
         self._api_client = api_client
 
+        self._response_handler = ReplyKeyboardHandler()
+
         self._updater = Updater(token=self._config.TELEGRAM_BOT_TOKEN.value, use_context=True)
         LOGGER.debug("Using bot id '{}' ({})".format(self._updater.bot.id, self._updater.bot.name))
-
         self._dispatcher = self._updater.dispatcher
 
         handler_groups = {
@@ -49,14 +51,23 @@ class KeelTelegramBot:
                 CommandHandler(COMMAND_REJECT,
                                filters=(~ Filters.reply) & (~ Filters.forwarded),
                                callback=self._reject_callback),
+                CommandHandler(COMMAND_DELETE,
+                               filters=(~ Filters.reply) & (~ Filters.forwarded),
+                               callback=self._delete_callback),
 
                 CommandHandler(COMMAND_HELP,
                                filters=(~ Filters.reply) & (~ Filters.forwarded),
                                callback=self._help_callback),
+                CommandHandler(CANCEL_KEYBOARD_COMMAND[1:],
+                               filters=(~ Filters.reply) & (~ Filters.forwarded),
+                               callback=self._response_handler.cancel_keyboard_callback),
                 # unknown command handler
                 MessageHandler(
                     filters=Filters.command & (~ Filters.forwarded),
                     callback=self._unknown_command_callback),
+                MessageHandler(
+                    filters=(~ Filters.forwarded),
+                    callback=self._any_message_callback),
             ]
         }
 
@@ -100,7 +111,7 @@ class KeelTelegramBot:
                      f"Welcome {user_first_name},\nthis is your keel-telegram-bot instance, ready to go!")
 
     @COMMAND_TIME_LIST_APPROVALS.time()
-    @command(name=COMMAND_TIME_LIST_APPROVALS,
+    @command(name=COMMAND_LIST_APPROVALS,
              description="List pending approvals",
              arguments=[
                  Argument(name=["rejected", "r"], description="Rejected", type=bool, example="true", optional=True),
@@ -120,12 +131,12 @@ class KeelTelegramBot:
         if len(items) <= 0:
             text = "No pending approvals"
         else:
-            items = list(map(lambda x: x["identifier"], items))
+            items = list(map(lambda x: f"{x['identifier']} ({x['votesReceived']}/{x['votesRequired']})", items))
             text = "\n".join(items)
         send_message(bot, chat_id, text, reply_to=message.message_id)
 
     @COMMAND_TIME_APPROVE.time()
-    @command(name=COMMAND_TIME_APPROVE,
+    @command(name=COMMAND_APPROVE,
              description="Approve a pending item",
              arguments=[
                  Argument(name=["identifier", "id"], description="Approval identifier",
@@ -138,19 +149,26 @@ class KeelTelegramBot:
         """
         Approve a pending item
         """
-        bot = context.bot
-        message = update.effective_message
-        chat_id = update.effective_chat.id
-
         if voter is None:
             voter = update.effective_user.full_name
 
-        self._api_client.approve(identifier, voter)
-        text = "Success"
-        send_message(bot, chat_id, text, reply_to=message.message_id)
+        def execute(update: Update, context: CallbackContext, item: dict, data: dict):
+            bot = context.bot
+            message = update.effective_message
+            chat_id = update.effective_chat.id
+
+            self._api_client.approve(item["id"], item["identifier"], voter)
+            text = "Success"
+            send_message(bot, chat_id, text, reply_to=message.message_id)
+
+        items = self._api_client.get_approvals(rejected=False, archived=False)
+        self._response_handler.await_user_selection(
+            update, context, identifier, choices=items, key=lambda x: x["identifier"],
+            callback=execute,
+        )
 
     @COMMAND_TIME_REJECT.time()
-    @command(name=COMMAND_TIME_REJECT,
+    @command(name=COMMAND_REJECT,
              description="Reject a pending item",
              arguments=[
                  Argument(name=["identifier", "id"], description="Approval identifier",
@@ -163,16 +181,55 @@ class KeelTelegramBot:
         """
         Reject a pending item
         """
-        bot = context.bot
-        message = update.effective_message
-        chat_id = update.effective_chat.id
-
         if voter is None:
             voter = update.effective_user.full_name
 
-        self._api_client.reject(identifier, voter)
-        text = "Success"
-        send_message(bot, chat_id, text, reply_to=message.message_id)
+        def execute(update: Update, context: CallbackContext, item: dict, data: dict):
+            bot = context.bot
+            message = update.effective_message
+            chat_id = update.effective_chat.id
+
+            self._api_client.reject(item["id"], item["identifier"], voter)
+            text = "Success"
+            send_message(bot, chat_id, text, reply_to=message.message_id)
+
+        items = self._api_client.get_approvals(rejected=False, archived=False)
+        self._response_handler.await_user_selection(
+            update, context, identifier, choices=items, key=lambda x: x["identifier"],
+            callback=execute,
+        )
+
+    @COMMAND_TIME_DELETE.time()
+    @command(name=COMMAND_DELETE,
+             description="Delete an approval item",
+             arguments=[
+                 Argument(name=["identifier", "id"], description="Approval identifier",
+                          example="default/myimage:1.5.5"),
+                 Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
+             ],
+             permissions=CONFIG_ADMINS)
+    def _delete_callback(self, update: Update, context: CallbackContext,
+                         identifier: str, voter: str or None) -> None:
+        """
+        Delete an archived item
+        """
+        if voter is None:
+            voter = update.effective_user.full_name
+
+        def execute(update: Update, context: CallbackContext, item: dict, data: dict):
+            bot = context.bot
+            message = update.effective_message
+            chat_id = update.effective_chat.id
+
+            self._api_client.delete(item["id"], item["identifier"], voter)
+            text = "Success"
+            send_message(bot, chat_id, text, reply_to=message.message_id)
+
+        items = self._api_client.get_approvals(archived=True)
+        self._response_handler.await_user_selection(
+            update, context, identifier, choices=items, key=lambda x: x["identifier"],
+            callback=execute,
+        )
 
     @command(
         name=COMMAND_HELP,
@@ -205,3 +262,11 @@ class KeelTelegramBot:
         if user_is_admin:
             self._help_callback(update, context)
             return
+
+    def _any_message_callback(self, update: Update, context: CallbackContext) -> None:
+        """
+        Used to respond to response keyboard entry selections
+        :param update: the chat update object
+        :param context: telegram context
+        """
+        self._response_handler.on_message(update, context)
