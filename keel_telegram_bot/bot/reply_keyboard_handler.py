@@ -31,6 +31,7 @@ class ReplyKeyboardHandler:
             try:
                 data["callback"](update, context, text, data["callback_data"])
                 self.awaiting_response.pop(user_id)
+                self.cancel_keyboard_callback(update, context)
             finally:
                 # TODO: log error
                 pass
