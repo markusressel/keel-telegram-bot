@@ -17,6 +17,7 @@ COMMAND_CONFIG = ['config', 'c']
 CANCEL_KEYBOARD_COMMAND = "/cancel_keyboard"
 
 # inline keyboard button data
+BUTTON_DATA_NOTHING = "_"
 BUTTON_DATA_APPROVE = "a"
 BUTTON_DATA_REJECT = "r"
 

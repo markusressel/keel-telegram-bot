@@ -2,6 +2,11 @@
 
 **keel-telegram-bot** is a telegram bot for [Keel](https://keel.sh/).
 
+
+<p align="center">
+  <img src="/screenshots/commands.png" width="400"> <img src="/screenshots/approval.png" width="400"> 
+</p>
+
 # Features
 
 * [x] Receive notifications (via Webhook)

@@ -346,6 +346,9 @@ class KeelTelegramBot:
         query_id = query.id
         data = query.data
 
+        if data == BUTTON_DATA_NOTHING:
+            return
+
         try:
             matches = re.search(r"^Id: (.*)", message_text, flags=re.MULTILINE)
             approval_id = matches.group(1)
@@ -355,11 +358,11 @@ class KeelTelegramBot:
             if data == BUTTON_DATA_APPROVE:
                 self._api_client.approve(approval_id, approval_identifier, from_user.full_name)
                 answer_text = f"Approved '{approval_identifier}'"
-                keyboard = self._build_inline_keyboard({"Approved": ""})
+                keyboard = self._build_inline_keyboard({"Approved": BUTTON_DATA_NOTHING})
             elif data == BUTTON_DATA_REJECT:
                 self._api_client.reject(approval_id, approval_identifier, from_user.full_name)
                 answer_text = f"Rejected '{approval_identifier}'"
-                keyboard = self._build_inline_keyboard({"Rejected": ""})
+                keyboard = self._build_inline_keyboard({"Rejected": BUTTON_DATA_NOTHING})
             else:
                 bot.answer_callback_query(query_id, text="Unknown button")
                 return
