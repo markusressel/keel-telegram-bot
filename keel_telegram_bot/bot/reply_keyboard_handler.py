@@ -26,15 +26,16 @@ class ReplyKeyboardHandler:
             return
 
         data = self.awaiting_response[user_id]
-        if text in data["valid_responses"]:
-            LOGGER.debug("Awaited response from user {} received: {}".format(user_id, text))
-            try:
-                data["callback"](update, context, text, data["callback_data"])
-                self.awaiting_response.pop(user_id)
-                self.cancel_keyboard_callback(update, context)
-            finally:
-                # TODO: log error
-                pass
+        if text not in data["valid_responses"]:
+            return
+        
+        LOGGER.debug("Awaited response from user {} received: {}".format(user_id, text))
+        try:
+            data["callback"](update, context, text, data["callback_data"])
+            self.awaiting_response.pop(user_id)
+            self.cancel_keyboard_callback(update, context)
+        except Exception as e:
+            LOGGER.exception(e)
 
     def _on_user_selection(self, update: Update, context: CallbackContext, message: str, data: dict):
         """
