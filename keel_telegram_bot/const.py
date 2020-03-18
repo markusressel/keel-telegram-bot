@@ -15,3 +15,6 @@ COMMAND_VERSION = ['version', 'v']
 COMMAND_CONFIG = ['config', 'c']
 
 CANCEL_KEYBOARD_COMMAND = "/cancel_keyboard"
+
+BUTTON_DATA_APPROVE = "a"
+BUTTON_DATA_REJECT = "r"

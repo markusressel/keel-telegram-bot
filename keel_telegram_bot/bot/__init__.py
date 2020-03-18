@@ -1,7 +1,9 @@
 import logging
+import re
+from typing import Dict
 
-from telegram import Update, ParseMode
-from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, CallbackContext
+from telegram import Update, ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, CallbackContext, CallbackQueryHandler
 from telegram_click.argument import Argument
 from telegram_click.decorator import command
 
@@ -37,7 +39,7 @@ class KeelTelegramBot:
         self._dispatcher = self._updater.dispatcher
 
         handler_groups = {
-            0: [],
+            0: [CallbackQueryHandler(callback=self._inline_keyboard_click_callback)],
             1: [
                 CommandHandler(COMMAND_START,
                                filters=(~ Filters.reply) & (~ Filters.forwarded),
@@ -132,7 +134,8 @@ class KeelTelegramBot:
         else:
             items = list(map(approval_to_str, items))
             text = "\n".join(items)
-        send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode=ParseMode.MARKDOWN)
+
+        send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode=ParseMode.HTML)
 
     @COMMAND_TIME_APPROVE.time()
     @command(name=COMMAND_APPROVE,
@@ -157,8 +160,8 @@ class KeelTelegramBot:
             chat_id = update.effective_chat.id
 
             self._api_client.approve(item["id"], item["identifier"], voter)
-            text = "Success"
-            send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode=ParseMode.MARKDOWN)
+            text = f"Approved {item['identifier']}"
+            send_message(bot, chat_id, text, reply_to=message.message_id)
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
         self._response_handler.await_user_selection(
@@ -188,8 +191,8 @@ class KeelTelegramBot:
             chat_id = update.effective_chat.id
 
             self._api_client.reject(item["id"], item["identifier"], voter)
-            text = "Success"
-            send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode=ParseMode.MARKDOWN)
+            text = f"Rejected {item['identifier']}"
+            send_message(bot, chat_id, text, reply_to=message.message_id)
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
         self._response_handler.await_user_selection(
@@ -219,8 +222,8 @@ class KeelTelegramBot:
             chat_id = update.effective_chat.id
 
             self._api_client.delete(item["id"], item["identifier"], voter)
-            text = "Success"
-            send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode=ParseMode.MARKDOWN)
+            text = f"Deleted {item['identifier']}"
+            send_message(bot, chat_id, text, reply_to=message.message_id)
 
         items = self._api_client.get_approvals()
         self._response_handler.await_user_selection(
@@ -240,7 +243,7 @@ class KeelTelegramBot:
         message = data.get("message", None)
 
         text = "\n".join([
-            f"**{title}: {level}**",
+            f"<b>{title}: {level}</b>",
             f"{identifier}",
             f"{type}",
             f"{message}",
@@ -249,7 +252,7 @@ class KeelTelegramBot:
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
             send_message(
                 self.bot, chat_id,
-                text, parse_mode=ParseMode.MARKDOWN,
+                text, parse_mode=ParseMode.HTML,
                 menu=None
             )
 
@@ -260,24 +263,18 @@ class KeelTelegramBot:
         :param item: new pending approval
         """
         text = approval_to_str(item)
-        keyboard = None
+
+        keyboard_items = {
+            "Approve": BUTTON_DATA_APPROVE,
+            "Reject": BUTTON_DATA_REJECT
+        }
+        keyboard = self._build_inline_keyboard(keyboard_items)
 
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
             send_message(
                 self.bot, chat_id,
-                text, parse_mode=ParseMode.MARKDOWN,
-                menu=None
-            )
-
-    def notify(self, message: str):
-        """
-        Sends a notification to all configured chats
-        :param message: the message to send
-        """
-        for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
-            send_message(
-                self.bot, chat_id,
-                message, parse_mode=ParseMode.MARKDOWN
+                text, parse_mode=ParseMode.HTML,
+                menu=keyboard
             )
 
     @command(
@@ -319,3 +316,49 @@ class KeelTelegramBot:
         :param context: telegram context
         """
         self._response_handler.on_message(update, context)
+
+    def _inline_keyboard_click_callback(self, update: Update, context: CallbackContext):
+        """
+        Handles inline keyboard button click callbacks
+        :param update:
+        :param context:
+        """
+        bot = context.bot
+        from_user = update.callback_query.from_user
+
+        query = update.callback_query
+        message_text = update.effective_message.text
+
+        matches = re.search(r"^Id: (.*)", message_text, flags=re.MULTILINE)
+        approval_id = matches.group(1)
+        matches = re.search(r"^Identifier: (.*)", message_text, flags=re.MULTILINE)
+        approval_identifier = matches.group(1)
+
+        query_id = query.id
+        data = query.data
+
+        if data == BUTTON_DATA_APPROVE:
+            self._api_client.approve(approval_id, approval_identifier, from_user.full_name)
+            answer_text = f"Approved '{approval_identifier}'"
+            keyboard = self._build_inline_keyboard({"Approved": ""})
+        elif data == BUTTON_DATA_REJECT:
+            self._api_client.reject(approval_id, approval_identifier, from_user.full_name)
+            answer_text = f"Rejected '{approval_identifier}'"
+            keyboard = self._build_inline_keyboard({"Rejected": ""})
+        else:
+            bot.answer_callback_query(query_id, text="Unknown button")
+            return
+
+        # remove buttons
+        query.edit_message_reply_markup(reply_markup=keyboard)
+        context.bot.answer_callback_query(query_id, text=answer_text)
+
+    @staticmethod
+    def _build_inline_keyboard(items: Dict[str, str]) -> InlineKeyboardMarkup:
+        """
+        Builds an inline button menu
+        :param items: dictionary of "button text" -> "callback data" items
+        :return: reply markup
+        """
+        keyboard = list(map(lambda x: InlineKeyboardButton(x[0], callback_data=x[1]), items.items()))
+        return InlineKeyboardMarkup.from_column(keyboard)

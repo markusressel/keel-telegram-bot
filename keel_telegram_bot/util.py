@@ -98,6 +98,7 @@ def filter_new_by_key(a: List, b: List, key: callable) -> List:
 
 
 def approval_to_str(data: dict) -> str:
+    id = data["id"]
     identifier = data["identifier"]
     current_version = data["currentVersion"]
     new_version = data["newVersion"]
@@ -112,7 +113,9 @@ def approval_to_str(data: dict) -> str:
     deadline_str = deadline_diff_to_str(deadline_diff)
 
     text = "\n".join([
-        f"**>> **{message}",
+        f"<b>{message}</b>",
+        "",
+        f"Id: {id}",
         f"Identifier: {identifier}",
         f"Version: {current_version} -> {new_version}",
         f"Votes: {votes_received}/{votes_required}",

@@ -113,8 +113,7 @@ class ReplyKeyboardHandler:
         message_id = update.effective_message.message_id
 
         text = "Cancelled"
-        send_message(bot, chat_id, text, parse_mode=ParseMode.MARKDOWN, reply_to=message_id,
-                     menu=ReplyKeyboardRemove(selective=True))
+        send_message(bot, chat_id, text, reply_to=message_id, menu=ReplyKeyboardRemove(selective=True))
 
         if user_id in self.awaiting_response:
             self.awaiting_response.pop(user_id)
