@@ -1,9 +1,9 @@
-name: Docker Image Latest CI
+name: Docker Image Release
 
 on:
   push:
     tags:
-      - *
+      - "*.*.*"
 
 jobs:
   build:
