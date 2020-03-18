@@ -2,6 +2,7 @@ import logging
 import re
 from typing import Dict
 
+from requests import HTTPError
 from telegram import Update, ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, CallbackContext, CallbackQueryHandler
 from telegram_click.argument import Argument
@@ -340,32 +341,38 @@ class KeelTelegramBot:
         bot = context.bot
         from_user = update.callback_query.from_user
 
-        query = update.callback_query
         message_text = update.effective_message.text
-
-        matches = re.search(r"^Id: (.*)", message_text, flags=re.MULTILINE)
-        approval_id = matches.group(1)
-        matches = re.search(r"^Identifier: (.*)", message_text, flags=re.MULTILINE)
-        approval_identifier = matches.group(1)
-
+        query = update.callback_query
         query_id = query.id
         data = query.data
 
-        if data == BUTTON_DATA_APPROVE:
-            self._api_client.approve(approval_id, approval_identifier, from_user.full_name)
-            answer_text = f"Approved '{approval_identifier}'"
-            keyboard = self._build_inline_keyboard({"Approved": ""})
-        elif data == BUTTON_DATA_REJECT:
-            self._api_client.reject(approval_id, approval_identifier, from_user.full_name)
-            answer_text = f"Rejected '{approval_identifier}'"
-            keyboard = self._build_inline_keyboard({"Rejected": ""})
-        else:
-            bot.answer_callback_query(query_id, text="Unknown button")
-            return
+        try:
+            matches = re.search(r"^Id: (.*)", message_text, flags=re.MULTILINE)
+            approval_id = matches.group(1)
+            matches = re.search(r"^Identifier: (.*)", message_text, flags=re.MULTILINE)
+            approval_identifier = matches.group(1)
 
-        # remove buttons
-        query.edit_message_reply_markup(reply_markup=keyboard)
-        context.bot.answer_callback_query(query_id, text=answer_text)
+            if data == BUTTON_DATA_APPROVE:
+                self._api_client.approve(approval_id, approval_identifier, from_user.full_name)
+                answer_text = f"Approved '{approval_identifier}'"
+                keyboard = self._build_inline_keyboard({"Approved": ""})
+            elif data == BUTTON_DATA_REJECT:
+                self._api_client.reject(approval_id, approval_identifier, from_user.full_name)
+                answer_text = f"Rejected '{approval_identifier}'"
+                keyboard = self._build_inline_keyboard({"Rejected": ""})
+            else:
+                bot.answer_callback_query(query_id, text="Unknown button")
+                return
+
+            # remove buttons
+            query.edit_message_reply_markup(reply_markup=keyboard)
+            context.bot.answer_callback_query(query_id, text=answer_text)
+        except HTTPError as e:
+            LOGGER.error(e)
+            bot.answer_callback_query(query_id, text=f"{e.response.content.decode('utf-8')}")
+        except Exception as e:
+            LOGGER.error(e)
+            bot.answer_callback_query(query_id, text=f"Unknwon error")
 
     @staticmethod
     def _build_inline_keyboard(items: Dict[str, str]) -> InlineKeyboardMarkup:
