@@ -28,12 +28,11 @@ class ReplyKeyboardHandler:
         data = self.awaiting_response[user_id]
         if text not in data["valid_responses"]:
             return
-        
+
         LOGGER.debug("Awaited response from user {} received: {}".format(user_id, text))
         try:
             data["callback"](update, context, text, data["callback_data"])
             self.awaiting_response.pop(user_id)
-            self.cancel_keyboard_callback(update, context)
         except Exception as e:
             LOGGER.exception(e)
 

@@ -3,7 +3,7 @@ import re
 from typing import Dict
 
 from requests import HTTPError
-from telegram import Update, ParseMode, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import Update, ParseMode, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, CallbackContext, CallbackQueryHandler
 from telegram_click.argument import Argument
 from telegram_click.decorator import command
@@ -176,7 +176,7 @@ class KeelTelegramBot:
 
             self._api_client.approve(item["id"], item["identifier"], voter)
             text = f"Approved {item['identifier']}"
-            send_message(bot, chat_id, text, reply_to=message.message_id)
+            send_message(bot, chat_id, text, reply_to=message.message_id, menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
         self._response_handler.await_user_selection(
@@ -207,7 +207,7 @@ class KeelTelegramBot:
 
             self._api_client.reject(item["id"], item["identifier"], voter)
             text = f"Rejected {item['identifier']}"
-            send_message(bot, chat_id, text, reply_to=message.message_id)
+            send_message(bot, chat_id, text, reply_to=message.message_id, menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
         self._response_handler.await_user_selection(
@@ -238,7 +238,7 @@ class KeelTelegramBot:
 
             self._api_client.delete(item["id"], item["identifier"], voter)
             text = f"Deleted {item['identifier']}"
-            send_message(bot, chat_id, text, reply_to=message.message_id)
+            send_message(bot, chat_id, text, reply_to=message.message_id, menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals()
         self._response_handler.await_user_selection(
