@@ -2,6 +2,7 @@ from keel_telegram_bot.api_client import KeelApiClient
 from keel_telegram_bot.bot import KeelTelegramBot
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.monitoring import RegularIntervalWorker
+from keel_telegram_bot.stats import APPROVAL_WATCHER_TIME
 from keel_telegram_bot.util import filter_new_by_key
 
 
@@ -15,8 +16,9 @@ class Monitor(RegularIntervalWorker):
         self._bot = bot
         self._old = None
 
+    @APPROVAL_WATCHER_TIME.time()
     def _run(self):
-        new = self._api_client.get_approvals(rejected=False)
+        new = self._api_client.get_approvals(rejected=False, archived=False)
         if self._old is None:
             self._old = new
             return
