@@ -1,8 +1,10 @@
 import functools
 import logging
 import operator
+from datetime import datetime, timezone, timedelta
 from typing import List, Any, Tuple
 
+import iso8601
 from telegram import Bot, Message, ReplyMarkup
 
 from keel_telegram_bot.config import Config
@@ -101,15 +103,42 @@ def approval_to_str(data: dict) -> str:
     new_version = data["newVersion"]
     votes_required = data["votesRequired"]
     votes_received = data["votesReceived"]
-    deadline = data["deadline"]
+    deadline = iso8601.parse_date(data["deadline"])
     message = data["message"]
+
+    now_utc = datetime.now().replace(microsecond=0).astimezone(tz=timezone.utc)
+    deadline_diff = timedelta(seconds=(deadline.replace(microsecond=0) - now_utc).total_seconds())
+
+    deadline_str = deadline_diff_to_str(deadline_diff)
 
     text = "\n".join([
         f"**>> **{message}",
         f"Identifier: {identifier}",
         f"Version: {current_version} -> {new_version}",
         f"Votes: {votes_received}/{votes_required}",
-        f"Deadline: {deadline}"
+        f"Deadline in: {deadline} ({deadline_str})"
     ])
 
     return text
+
+
+def deadline_diff_to_str(deadline_diff) -> str:
+    units = []
+
+    days = deadline_diff.days if deadline_diff.days else ""
+    if days:
+        units.append(f"{days}d")
+
+    hours = deadline_diff.seconds // 3600
+    if hours:
+        units.append(f"{hours}h")
+
+    minutes = (deadline_diff.seconds // 60) % 60
+    if minutes:
+        units.append(f"{minutes}m")
+
+    seconds = int(deadline_diff.seconds) % 60
+    if seconds:
+        units.append(f"{seconds}s")
+
+    return " ".join(units)

@@ -2,7 +2,7 @@ from keel_telegram_bot.api_client import KeelApiClient
 from keel_telegram_bot.bot import KeelTelegramBot
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.monitoring import RegularIntervalWorker
-from keel_telegram_bot.util import filter_new_by_key, approval_to_str
+from keel_telegram_bot.util import filter_new_by_key
 
 
 class Monitor(RegularIntervalWorker):
@@ -24,11 +24,5 @@ class Monitor(RegularIntervalWorker):
         new_pending = filter_new_by_key(self._old, new, key=lambda x: x["id"])
         self._old = new
 
-        if len(new_pending) <= 0:
-            return
-
-        text = "\n".join([
-            f"**New pending approvals ({len(new_pending)}):**",
-            *list(map(approval_to_str, new_pending))
-        ])
-        self._bot.notify(text)
+        for item in new_pending:
+            self._bot.on_new_pending_approval(item)

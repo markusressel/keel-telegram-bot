@@ -13,21 +13,7 @@ app = Flask(__name__)
 def catch_all(path: str = None):
     if request.data is not None:
         data = json.loads(request.data)
-
-        identifier = data.get("identifier", None)
-        title = data.get("name", None)
-        type = data.get("type", None)
-        level = data.get("level", None)  # success/failure
-        message = data.get("message", None)
-
-        text = "\n".join([
-            f"**{title}: {level}**",
-            f"{identifier}",
-            f"{type}",
-            f"{message}",
-        ])
-
-        WebsocketServer.bot.notify(text)
+        WebsocketServer.bot.on_notification(data)
     return "OK"
 
 

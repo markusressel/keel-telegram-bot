@@ -1,8 +1,8 @@
 import logging
 from typing import List
 
-from pip._vendor import requests
-from pip._vendor.requests.auth import HTTPBasicAuth
+import requests
+from requests.auth import HTTPBasicAuth
 
 from keel_telegram_bot.const import REQUESTS_TIMEOUT
 
@@ -97,11 +97,13 @@ class KeelApiClient:
         url = self._create_request_url(url, params)
 
         if method is GET:
-            response = requests.get(url, headers=headers, auth=self._auth, json=json, timeout=REQUESTS_TIMEOUT)
+            method = requests.get
         elif method is POST:
-            response = requests.post(url, headers=headers, auth=self._auth, json=json, timeout=REQUESTS_TIMEOUT)
+            method = requests.post
         else:
             raise ValueError("Unsupported method: {}".format(method))
+
+        response = method(url, headers=headers, auth=self._auth, json=json, timeout=REQUESTS_TIMEOUT)
 
         response.raise_for_status()
         # some responses do not return data so we just ignore the body in that case

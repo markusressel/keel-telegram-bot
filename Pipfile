@@ -4,6 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+iso8601 = "*"
+requests = "*"
 flask = ">=1.1.1"
 container-app-conf = ">=5.0.0"
 python-telegram-bot = ">=12"

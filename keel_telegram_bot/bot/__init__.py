@@ -6,10 +6,10 @@ from telegram_click.argument import Argument
 from telegram_click.decorator import command
 
 from keel_telegram_bot.api_client import KeelApiClient
+from keel_telegram_bot.bot.permissions import CONFIG_ADMINS
+from keel_telegram_bot.bot.reply_keyboard_handler import ReplyKeyboardHandler
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.const import *
-from keel_telegram_bot.permissions import CONFIG_ADMINS
-from keel_telegram_bot.reply_keyboard_handler import ReplyKeyboardHandler
 from keel_telegram_bot.stats import COMMAND_TIME_START, COMMAND_TIME_LIST_APPROVALS, COMMAND_TIME_APPROVE, \
     COMMAND_TIME_REJECT, COMMAND_TIME_DELETE
 from keel_telegram_bot.util import send_message, approval_to_str
@@ -74,13 +74,6 @@ class KeelTelegramBot:
         for group, handlers in handler_groups.items():
             for handler in handlers:
                 self._updater.dispatcher.add_handler(handler, group=group)
-
-    def notify(self, message: str):
-        for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
-            send_message(
-                self.bot, chat_id,
-                message, parse_mode=ParseMode.MARKDOWN
-            )
 
     @property
     def bot(self):
@@ -234,6 +227,58 @@ class KeelTelegramBot:
             update, context, identifier, choices=items, key=lambda x: x["identifier"],
             callback=execute,
         )
+
+    def on_notification(self, data: dict):
+        """
+        Handles incoming notifications (via Webhook)
+        :param data: notification data
+        """
+        identifier = data.get("identifier", None)
+        title = data.get("name", None)
+        type = data.get("type", None)
+        level = data.get("level", None)  # success/failure
+        message = data.get("message", None)
+
+        text = "\n".join([
+            f"**{title}: {level}**",
+            f"{identifier}",
+            f"{type}",
+            f"{message}",
+        ])
+
+        for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
+            send_message(
+                self.bot, chat_id,
+                text, parse_mode=ParseMode.MARKDOWN,
+                menu=None
+            )
+
+    def on_new_pending_approval(self, item: dict):
+        """
+        Handles new pending approvals by sending a message
+        including an inline keyboard to all configured chat ids
+        :param item: new pending approval
+        """
+        text = approval_to_str(item)
+        keyboard = None
+
+        for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
+            send_message(
+                self.bot, chat_id,
+                text, parse_mode=ParseMode.MARKDOWN,
+                menu=None
+            )
+
+    def notify(self, message: str):
+        """
+        Sends a notification to all configured chats
+        :param message: the message to send
+        """
+        for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
+            send_message(
+                self.bot, chat_id,
+                message, parse_mode=ParseMode.MARKDOWN
+            )
 
     @command(
         name=COMMAND_HELP,
