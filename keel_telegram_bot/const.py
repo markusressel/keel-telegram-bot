@@ -16,5 +16,12 @@ COMMAND_CONFIG = ['config', 'c']
 
 CANCEL_KEYBOARD_COMMAND = "/cancel_keyboard"
 
+# inline keyboard button data
 BUTTON_DATA_APPROVE = "a"
 BUTTON_DATA_REJECT = "r"
+
+# api keys
+KEY_ARCHIVED = "archived"
+KEY_REJECTED = "rejected"
+KEY_VOTES_REQUIRED = "votesRequired"
+KEY_VOTES_RECEIVED = "votesReceived"

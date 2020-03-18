@@ -129,11 +129,25 @@ class KeelTelegramBot:
         chat_id = update.effective_chat.id
 
         items = self._api_client.get_approvals(rejected, archived)
-        if len(items) <= 0:
-            text = "No pending approvals"
-        else:
-            items = list(map(approval_to_str, items))
-            text = "\n".join(items)
+
+        rejected_items = list(filter(lambda x: x[KEY_REJECTED], items))
+        archived_items = list(filter(lambda x: x[KEY_ARCHIVED], items))
+        pending_items = list(filter(
+            lambda x: x not in archived_items and x not in rejected_items
+                      and x[KEY_VOTES_RECEIVED] < x[KEY_VOTES_REQUIRED], items))
+        approved_items = list(
+            filter(lambda x: x not in rejected_items and x not in archived_items and x not in pending_items, items))
+
+        text = "\n".join([
+            f"<b>Pending ({len(pending_items)}):</b>",
+            "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), pending_items))),
+            f"<b>Approved ({len(approved_items)}):</b>",
+            "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), approved_items))),
+            f"<b>Rejected ({len(rejected_items)}):</b>",
+            "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), rejected_items))),
+            f"<b>Archived ({len(archived_items)}):</b>",
+            "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), archived_items)))
+        ])
 
         send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode=ParseMode.HTML)
 
