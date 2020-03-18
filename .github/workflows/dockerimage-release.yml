@@ -2,7 +2,8 @@ name: Docker Image Latest CI
 
 on:
   push:
-    branches: [ master ]
+    tags:
+      - *
 
 jobs:
   build:
@@ -10,8 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build the Docker image
-        run: docker build . --file Dockerfile --tag markusressel/keel-telegram-bot:latest
+        run: docker build . --file Dockerfile --tag markusressel/keel-telegram-bot:${{ github.ref }}
       - name: Login to DockerHub Registry
         run: echo ${{ secrets.DOCKERHUB_PASSWORD }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
       - name: Push the Docker image
-        run: docker push markusressel/keel-telegram-bot:latest
+        run: docker push markusressel/keel-telegram-bot:${{ github.ref }}
