@@ -2,6 +2,7 @@ import logging
 import re
 from typing import Dict
 
+from container_app_conf.formatter.toml import TomlFormatter
 from requests import HTTPError
 from telegram import Update, ParseMode, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, CallbackContext, CallbackQueryHandler
@@ -61,6 +62,9 @@ class KeelTelegramBot:
                 CommandHandler(COMMAND_HELP,
                                filters=(~ Filters.reply) & (~ Filters.forwarded),
                                callback=self._help_callback),
+                CommandHandler(COMMAND_CONFIG,
+                               filters=(~ Filters.reply) & (~ Filters.forwarded),
+                               callback=self._config_callback),
                 CommandHandler(COMMAND_VERSION,
                                filters=(~ Filters.reply) & (~ Filters.forwarded),
                                callback=self._version_callback),
@@ -294,6 +298,18 @@ class KeelTelegramBot:
                 text, parse_mode=ParseMode.HTML,
                 menu=keyboard
             )
+
+    @command(
+        name=COMMAND_CONFIG,
+        description="Print bot config.",
+        permissions=CONFIG_ADMINS,
+    )
+    def _config_callback(self, update: Update, context: CallbackContext):
+        bot = context.bot
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+        text = self._config.print(TomlFormatter())
+        send_message(bot, chat_id, text, reply_to=message.message_id)
 
     @command(
         name=COMMAND_HELP,
