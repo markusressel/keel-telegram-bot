@@ -3,7 +3,7 @@ import subprocess
 
 from setuptools import setup, find_packages
 
-VERSION_NUMBER = "1.0.0"
+from keel_telegram_bot import __version__
 
 GIT_BRANCH = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"])
 GIT_BRANCH = GIT_BRANCH.decode()  # convert to standard string
@@ -11,22 +11,22 @@ GIT_BRANCH = GIT_BRANCH.rstrip()  # remove unnecessary whitespace
 
 if GIT_BRANCH == "master":
     DEVELOPMENT_STATUS = "Development Status :: 5 - Production/Stable"
-    VERSION_NAME = VERSION_NUMBER
+    VERSION_NAME = __version__
 elif GIT_BRANCH == "beta":
     DEVELOPMENT_STATUS = "Development Status :: 4 - Beta"
-    VERSION_NAME = "%s-beta" % VERSION_NUMBER
+    VERSION_NAME = "%s-beta" % __version__
 elif GIT_BRANCH == "dev":
     DEVELOPMENT_STATUS = "Development Status :: 3 - Alpha"
-    VERSION_NAME = "%s-dev" % VERSION_NUMBER
-elif (os.environ.get("TRAVIS_BRANCH", None) == os.environ.get("TRAVIS_TAG", None) == "v{}".format(VERSION_NUMBER)) or \
+    VERSION_NAME = "%s-dev" % __version__
+elif (os.environ.get("TRAVIS_BRANCH", None) == os.environ.get("TRAVIS_TAG", None) == "v{}".format(__version__)) or \
         "GITHUB_RELEASE" in os.environ:
     # travis tagged release branch
     DEVELOPMENT_STATUS = "Development Status :: 5 - Production/Stable"
-    VERSION_NAME = VERSION_NUMBER
+    VERSION_NAME = __version__
 else:
     print("Unknown git branch, using pre-alpha as default")
     DEVELOPMENT_STATUS = "Development Status :: 2 - Pre-Alpha"
-    VERSION_NAME = "%s-%s" % (VERSION_NUMBER, GIT_BRANCH)
+    VERSION_NAME = "%s-%s" % (__version__, GIT_BRANCH)
 
 
 def readme_type() -> str:
