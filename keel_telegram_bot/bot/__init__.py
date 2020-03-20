@@ -13,9 +13,7 @@ from keel_telegram_bot.api_client import KeelApiClient
 from keel_telegram_bot.bot.permissions import CONFIG_ADMINS
 from keel_telegram_bot.bot.reply_keyboard_handler import ReplyKeyboardHandler
 from keel_telegram_bot.config import Config
-from keel_telegram_bot.const import *
-from keel_telegram_bot.stats import COMMAND_TIME_START, COMMAND_TIME_LIST_APPROVALS, COMMAND_TIME_APPROVE, \
-    COMMAND_TIME_REJECT, COMMAND_TIME_DELETE
+from keel_telegram_bot.stats import *
 from keel_telegram_bot.util import send_message, approval_to_str
 
 LOGGER = logging.getLogger(__name__)
@@ -258,6 +256,8 @@ class KeelTelegramBot:
         Handles incoming notifications (via Webhook)
         :param data: notification data
         """
+        KEEL_NOTIFICATION_COUNTER.inc()
+
         identifier = data.get("identifier", None)
         title = data.get("name", None)
         type = data.get("type", None)
@@ -392,10 +392,12 @@ class KeelTelegramBot:
                 self._api_client.approve(approval_id, approval_identifier, from_user.full_name)
                 answer_text = f"Approved '{approval_identifier}'"
                 keyboard = self._build_inline_keyboard({"Approved": BUTTON_DATA_NOTHING})
+                KEEL_APPROVAL_ACTION_COUNTER.labels(action="approve", identifier=approval_identifier).inc()
             elif data == BUTTON_DATA_REJECT:
                 self._api_client.reject(approval_id, approval_identifier, from_user.full_name)
                 answer_text = f"Rejected '{approval_identifier}'"
                 keyboard = self._build_inline_keyboard({"Rejected": BUTTON_DATA_NOTHING})
+                KEEL_APPROVAL_ACTION_COUNTER.labels(action="reject", identifier=approval_identifier).inc()
             else:
                 bot.answer_callback_query(query_id, text="Unknown button")
                 return

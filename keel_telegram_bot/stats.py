@@ -1,4 +1,4 @@
-from prometheus_client import Summary
+from prometheus_client import Summary, Counter
 from prometheus_client.metrics import MetricWrapperBase
 
 from keel_telegram_bot.const import *
@@ -12,6 +12,10 @@ COMMAND_TIME_DELETE = COMMAND_TIME.labels(command=COMMAND_DELETE[0])
 
 WATCHER_TIME = Summary('watcher_processing_seconds', 'Time spent in a watcher', ['type'])
 APPROVAL_WATCHER_TIME = WATCHER_TIME.labels(type="approval")
+
+KEEL_NOTIFICATION_COUNTER = Counter('keel_notifications', 'Counts notifications received from keel')
+KEEL_APPROVAL_ACTION_COUNTER = Counter('keel_approval_action_counter',
+                                       'Counts approval notificaion actions', ['action', 'identifier'])
 
 
 def get_metrics() -> []:
