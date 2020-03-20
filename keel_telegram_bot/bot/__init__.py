@@ -180,7 +180,7 @@ class KeelTelegramBot:
     @command(name=COMMAND_APPROVE,
              description="Approve a pending item",
              arguments=[
-                 Argument(name=["identifier", "i"], description="Approval identifier",
+                 Argument(name=["identifier", "i"], description="Approval identifier or id",
                           example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
@@ -203,6 +203,12 @@ class KeelTelegramBot:
             send_message(bot, chat_id, text, reply_to=message.message_id, menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
+
+        exact_matches = list(filter(lambda x: x["id"] == identifier, items))
+        if len(exact_matches) > 0:
+            execute(update, context, exact_matches[0], {})
+            return
+
         self._response_handler.await_user_selection(
             update, context, identifier, choices=items, key=lambda x: x["identifier"],
             callback=execute,
@@ -212,7 +218,8 @@ class KeelTelegramBot:
     @command(name=COMMAND_REJECT,
              description="Reject a pending item",
              arguments=[
-                 Argument(name=["identifier", "i"], description="Approval identifier", example="default/myimage:1.5.5"),
+                 Argument(name=["identifier", "i"], description="Approval identifier or id",
+                          example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
              permissions=CONFIG_ADMINS)
@@ -234,6 +241,12 @@ class KeelTelegramBot:
             send_message(bot, chat_id, text, reply_to=message.message_id, menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
+
+        exact_matches = list(filter(lambda x: x["id"] == identifier, items))
+        if len(exact_matches) > 0:
+            execute(update, context, exact_matches[0], {})
+            return
+
         self._response_handler.await_user_selection(
             update, context, identifier, choices=items, key=lambda x: x["identifier"],
             callback=execute,
@@ -243,7 +256,8 @@ class KeelTelegramBot:
     @command(name=COMMAND_DELETE,
              description="Delete an approval item",
              arguments=[
-                 Argument(name=["identifier", "i"], description="Approval identifier", example="default/myimage:1.5.5"),
+                 Argument(name=["identifier", "i"], description="Approval identifier or id",
+                          example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
              permissions=CONFIG_ADMINS)
@@ -265,6 +279,12 @@ class KeelTelegramBot:
             send_message(bot, chat_id, text, reply_to=message.message_id, menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals()
+
+        exact_matches = list(filter(lambda x: x["id"] == identifier, items))
+        if len(exact_matches) > 0:
+            execute(update, context, exact_matches[0], {})
+            return
+
         self._response_handler.await_user_selection(
             update, context, identifier, choices=items, key=lambda x: x["identifier"],
             callback=execute,
