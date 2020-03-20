@@ -145,31 +145,35 @@ class KeelTelegramBot:
         approved_items = list(
             filter(lambda x: x not in rejected_items and x not in archived_items and x not in pending_items, items))
 
-        lines = [
-            f"<b>=== Pending ({len(pending_items)}) ===</b>",
-            "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), pending_items))),
-
-        ]
+        lines = []
+        if archived:
+            lines.append("\n".join([
+                f"<b>=== Archived ({len(archived_items)}) ===</b>",
+                "",
+                "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), archived_items)))
+            ]).strip())
 
         if approved:
-            lines.extend([
+            lines.append("\n".join([
                 f"<b>=== Approved ({len(approved_items)}) ===</b>",
+                "",
                 "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), approved_items))),
-            ])
+            ]).strip())
 
         if rejected:
-            lines.extend([
+            lines.append("\n".join([
                 f"<b>=== Rejected ({len(rejected_items)}) ===</b>",
+                "",
                 "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), rejected_items))),
-            ])
+            ]).strip())
 
-        if archived:
-            lines.extend([
-                f"<b>=== Archived ({len(archived_items)}) ===</b>",
-                "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), archived_items)))
-            ])
+        lines.append("\n".join([
+            f"<b>=== Pending ({len(pending_items)}) ===</b>",
+            "",
+            "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), pending_items))),
+        ]))
 
-        text = "\n".join(lines)
+        text = "\n\n".join(lines).strip()
         send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode=ParseMode.HTML)
 
     @COMMAND_TIME_APPROVE.time()

@@ -114,7 +114,6 @@ def approval_to_str(data: dict) -> str:
 
     text = "\n".join([
         f"<b>{message}</b>",
-        "",
         f"Id: {id}",
         f"Identifier: {identifier}",
         f"Version: {current_version} -> {new_version}",
