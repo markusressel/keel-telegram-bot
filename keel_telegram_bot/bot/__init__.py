@@ -6,7 +6,7 @@ from container_app_conf.formatter.toml import TomlFormatter
 from requests import HTTPError
 from telegram import Update, ParseMode, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, CallbackContext, CallbackQueryHandler
-from telegram_click.argument import Argument
+from telegram_click.argument import Argument, Flag
 from telegram_click.decorator import command
 
 from keel_telegram_bot.api_client import KeelApiClient
@@ -121,12 +121,13 @@ class KeelTelegramBot:
     @command(name=COMMAND_LIST_APPROVALS,
              description="List pending approvals",
              arguments=[
-                 Argument(name=["rejected", "r"], description="Rejected", type=bool, example="true", optional=True),
-                 Argument(name=["archived", "a"], description="Archived", type=bool, example="true", optional=True),
+                 Flag(name=["archived", "h"], description="Include archived items"),
+                 Flag(name=["approved", "a"], description="Include approved items"),
+                 Flag(name=["rejected", "r"], description="Include rejected items"),
              ],
              permissions=CONFIG_ADMINS)
     def _list_approvals_callback(self, update: Update, context: CallbackContext,
-                                 rejected: bool or None, archived: bool or None) -> None:
+                                 archived: bool, approved: bool, rejected: bool) -> None:
         """
         List pending approvals
         """
@@ -134,7 +135,7 @@ class KeelTelegramBot:
         message = update.effective_message
         chat_id = update.effective_chat.id
 
-        items = self._api_client.get_approvals(rejected, archived)
+        items = self._api_client.get_approvals()
 
         rejected_items = list(filter(lambda x: x[KEY_REJECTED], items))
         archived_items = list(filter(lambda x: x[KEY_ARCHIVED], items))
@@ -144,17 +145,31 @@ class KeelTelegramBot:
         approved_items = list(
             filter(lambda x: x not in rejected_items and x not in archived_items and x not in pending_items, items))
 
-        text = "\n".join([
-            f"<b>Pending ({len(pending_items)}):</b>",
+        lines = [
+            f"<b>=== Pending ({len(pending_items)}) ===</b>",
             "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), pending_items))),
-            f"<b>Approved ({len(approved_items)}):</b>",
-            "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), approved_items))),
-            f"<b>Rejected ({len(rejected_items)}):</b>",
-            "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), rejected_items))),
-            f"<b>Archived ({len(archived_items)}):</b>",
-            "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), archived_items)))
-        ])
 
+        ]
+
+        if approved:
+            lines.extend([
+                f"<b>=== Approved ({len(approved_items)}) ===</b>",
+                "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), approved_items))),
+            ])
+
+        if rejected:
+            lines.extend([
+                f"<b>=== Rejected ({len(rejected_items)}) ===</b>",
+                "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), rejected_items))),
+            ])
+
+        if archived:
+            lines.extend([
+                f"<b>=== Archived ({len(archived_items)}) ===</b>",
+                "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), archived_items)))
+            ])
+
+        text = "\n".join(lines)
         send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode=ParseMode.HTML)
 
     @COMMAND_TIME_APPROVE.time()
