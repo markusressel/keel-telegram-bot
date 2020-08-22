@@ -309,11 +309,11 @@
         },
         "telegram-click": {
             "hashes": [
-                "sha256:178d8faf825f01c8837f27ed6058fbc1069eaa131350d8cf8640155cbdd9fbb2",
-                "sha256:9f67ab08db78621983800f7bd7ba8b756361d9f577ebc7c6d92c6d7700fdfa95"
+                "sha256:253c5a7a46a4d6a4535e8fa68bc93bbb331df3ee418ee43fe13c858081730d6d",
+                "sha256:3f0f30e6d2523c44a346c3950cb99eaf76aecb236f2f5d82a233836a71038332"
             ],
             "index": "pypi",
-            "version": "==4.0.0"
+            "version": "==4.1.0"
         },
         "toml": {
             "hashes": [
