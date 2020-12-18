@@ -497,7 +497,7 @@ class KeelTelegramBot:
             approval_identifier = approval["identifier"]
             key = f"{approval_id}_{approval_identifier}"
 
-            chats = self._message_map.get(key, set())
+            chats = self._message_map.get(key, {})
             failed_messages = set()
             for chat_id, message_ids in chats.items():
                 for message_id in message_ids:
