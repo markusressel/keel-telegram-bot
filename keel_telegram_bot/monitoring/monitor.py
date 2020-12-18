@@ -25,12 +25,18 @@ class Monitor(RegularIntervalWorker):
         """
         Called repeatedly
         """
+        all = self._api_client.get_approvals(rejected=True, archived=True)
         new = self._api_client.get_approvals(rejected=False, archived=False)
+
+        try:
+            # update existing messages
+            self._bot.update_messages(all)
+        except Exception as ex:
+            LOGGER.exception(ex)
+
         if self._old is None:
             self._old = new
             return
-
-        self._bot.update_messages(new)
 
         new_pending = filter_new_by_key(self._old, new, key=lambda x: x["id"])
         self._old = new
