@@ -204,11 +204,13 @@ class KeelTelegramBot:
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
 
+        # compare to the "id" first
         exact_matches = list(filter(lambda x: x["id"] == identifier, items))
         if len(exact_matches) > 0:
             execute(update, context, exact_matches[0], {})
             return
 
+        # then fuzzy match to "identifier"
         self._response_handler.await_user_selection(
             update, context, identifier, choices=items, key=lambda x: x["identifier"],
             callback=execute,
@@ -230,6 +232,8 @@ class KeelTelegramBot:
         """
         if voter is None:
             voter = update.effective_user.full_name
+        if not voter:
+            voter = update.effective_user.name
 
         def execute(update: Update, context: CallbackContext, item: dict, data: dict):
             bot = context.bot
@@ -242,11 +246,13 @@ class KeelTelegramBot:
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
 
+        # compare to the "id" first
         exact_matches = list(filter(lambda x: x["id"] == identifier, items))
         if len(exact_matches) > 0:
             execute(update, context, exact_matches[0], {})
             return
 
+        # then fuzzy match to "identifier"
         self._response_handler.await_user_selection(
             update, context, identifier, choices=items, key=lambda x: x["identifier"],
             callback=execute,
@@ -280,11 +286,13 @@ class KeelTelegramBot:
 
         items = self._api_client.get_approvals()
 
+        # compare to the "id" first
         exact_matches = list(filter(lambda x: x["id"] == identifier, items))
         if len(exact_matches) > 0:
             execute(update, context, exact_matches[0], {})
             return
 
+        # then fuzzy match to "identifier"
         self._response_handler.await_user_selection(
             update, context, identifier, choices=items, key=lambda x: x["identifier"],
             callback=execute,

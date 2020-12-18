@@ -110,7 +110,8 @@ def approval_to_str(data: dict) -> str:
     now_utc = datetime.now().replace(microsecond=0).astimezone(tz=timezone.utc)
     deadline_diff = timedelta(seconds=(deadline.replace(microsecond=0) - now_utc).total_seconds())
 
-    deadline_str = deadline_diff_to_str(deadline_diff)
+    deadline_abs_str = deadline.strftime('%m/%d %H:%M:%S')
+    deadline_remaining_str = deadline_diff_to_str(deadline_diff)
 
     text = "\n".join([
         f"<b>{message}</b>",
@@ -118,7 +119,7 @@ def approval_to_str(data: dict) -> str:
         f"Identifier: {identifier}",
         f"Version: {current_version} -> {new_version}",
         f"Votes: {votes_received}/{votes_required}",
-        f"Deadline in: {deadline} ({deadline_str})"
+        f"Expires: {deadline_abs_str} ({deadline_remaining_str})"
     ])
 
     return text
@@ -143,4 +144,4 @@ def deadline_diff_to_str(deadline_diff) -> str:
     if seconds:
         units.append(f"{seconds}s")
 
-    return " ".join(units)
+    return "".join(units)
