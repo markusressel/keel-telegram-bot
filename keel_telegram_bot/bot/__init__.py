@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Dict
+from typing import Dict, List
 
 from container_app_conf.formatter.toml import TomlFormatter
 from requests import HTTPError
@@ -31,6 +31,7 @@ class KeelTelegramBot:
         """
         self._config = config
         self._api_client = api_client
+        self._message_map = {}
 
         self._response_handler = ReplyKeyboardHandler()
 
@@ -340,11 +341,15 @@ class KeelTelegramBot:
         keyboard = self._build_inline_keyboard(keyboard_items)
 
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
-            send_message(
-                self.bot, chat_id,
-                text, parse_mode=ParseMode.HTML,
-                menu=keyboard
-            )
+            try:
+                response = send_message(
+                    self.bot, chat_id,
+                    text, parse_mode=ParseMode.HTML,
+                    menu=keyboard
+                )
+                self._register_message(response.chat_id, response.message_id, item["id"], item["identifier"])
+            except Exception as ex:
+                LOGGER.exception(ex)
 
     @command(
         name=COMMAND_CONFIG,
@@ -468,3 +473,43 @@ class KeelTelegramBot:
         """
         keyboard = list(map(lambda x: InlineKeyboardButton(x[0], callback_data=x[1]), items.items()))
         return InlineKeyboardMarkup.from_column(keyboard)
+
+    def _register_message(self, chat_id: int, message_id: int, approval_id: str, approval_identifier: str):
+        """
+        Registers a telegram message, that corresponds with an approval notification.
+        This is used to update this message. This is possible for approx. 48 hours, after
+        which telegram prohibits modifications of the original message.
+        :param chat_id: chat id
+        :param message_id: message id
+        :param approval_id: approval id
+        :param approval_identifier: approval identifier
+        """
+        key = f"{approval_id}_{approval_identifier}"
+        self._message_map.setdefault(key, {}).setdefault(chat_id, set()).add(message_id)
+
+    def update_messages(self, approvals: List[dict]):
+        """
+        Updates existing approval messages
+        :param approvals: approvals data
+        """
+        for approval in approvals:
+            approval_id = approval["id"]
+            approval_identifier = approval["identifier"]
+            key = f"{approval_id}_{approval_identifier}"
+
+            chats = self._message_map.get(key, set())
+            failed_messages = set()
+            for chat_id, message_ids in chats.items():
+                for message_id in message_ids:
+                    approval_str = approval_to_str(approval)
+                    try:
+                        self.bot.edit_message_text(approval_str, chat_id=chat_id, message_id=message_id)
+
+                        # TODO: if approval was rejected/approved, remove buttons
+                        # self._bot.bot.edit_message_reply_markup(reply_markup=keyboard)
+                    except Exception as ex:
+                        failed_messages.add(message_id)
+                        LOGGER.exception(ex)
+
+                for failure in failed_messages:
+                    message_ids.pop(failure)

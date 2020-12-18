@@ -1,9 +1,13 @@
+import logging
+
 from keel_telegram_bot.api_client import KeelApiClient
 from keel_telegram_bot.bot import KeelTelegramBot
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.monitoring import RegularIntervalWorker
 from keel_telegram_bot.stats import APPROVAL_WATCHER_TIME, NEW_PENDING_APPROVAL_COUNTER
 from keel_telegram_bot.util import filter_new_by_key
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Monitor(RegularIntervalWorker):
@@ -18,10 +22,15 @@ class Monitor(RegularIntervalWorker):
 
     @APPROVAL_WATCHER_TIME.time()
     def _run(self):
+        """
+        Called repeatedly
+        """
         new = self._api_client.get_approvals(rejected=False, archived=False)
         if self._old is None:
             self._old = new
             return
+
+        self._bot.update_messages(new)
 
         new_pending = filter_new_by_key(self._old, new, key=lambda x: x["id"])
         self._old = new
