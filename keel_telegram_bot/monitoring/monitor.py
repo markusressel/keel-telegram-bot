@@ -25,21 +25,20 @@ class Monitor(RegularIntervalWorker):
         """
         Called repeatedly
         """
-        all = self._api_client.get_approvals(rejected=True, archived=True)
-        new = self._api_client.get_approvals(rejected=False, archived=False)
+        active = self._api_client.get_approvals(rejected=False, archived=False)
 
         try:
             # update existing messages
-            self._bot.update_messages(all)
+            self._bot.update_messages()
         except Exception as ex:
             LOGGER.exception(ex)
 
         if self._old is None:
-            self._old = new
+            self._old = active
             return
 
-        new_pending = filter_new_by_key(self._old, new, key=lambda x: x["id"])
-        self._old = new
+        new_pending = filter_new_by_key(self._old, active, key=lambda x: x["id"])
+        self._old = active
 
         for item in new_pending:
             NEW_PENDING_APPROVAL_COUNTER.inc()

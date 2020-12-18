@@ -333,19 +333,14 @@ class KeelTelegramBot:
         :param item: new pending approval
         """
         text = approval_to_str(item)
-
-        keyboard_items = {
-            "Approve": BUTTON_DATA_APPROVE,
-            "Reject": BUTTON_DATA_REJECT
-        }
-        keyboard = self._build_inline_keyboard(keyboard_items)
+        menu = self.create_approval_notification_menu(item)
 
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
             try:
                 response = send_message(
                     self.bot, chat_id,
                     text, parse_mode=ParseMode.HTML,
-                    menu=keyboard
+                    menu=menu
                 )
                 self._register_message(response.chat_id, response.message_id, item["id"], item["identifier"])
             except Exception as ex:
@@ -443,20 +438,17 @@ class KeelTelegramBot:
             if data == BUTTON_DATA_APPROVE:
                 self._api_client.approve(approval_id, approval_identifier, from_user.full_name)
                 answer_text = f"Approved '{approval_identifier}'"
-                keyboard = self._build_inline_keyboard({"Approved": BUTTON_DATA_NOTHING})
                 KEEL_APPROVAL_ACTION_COUNTER.labels(action="approve", identifier=approval_identifier).inc()
             elif data == BUTTON_DATA_REJECT:
                 self._api_client.reject(approval_id, approval_identifier, from_user.full_name)
                 answer_text = f"Rejected '{approval_identifier}'"
-                keyboard = self._build_inline_keyboard({"Rejected": BUTTON_DATA_NOTHING})
                 KEEL_APPROVAL_ACTION_COUNTER.labels(action="reject", identifier=approval_identifier).inc()
             else:
                 bot.answer_callback_query(query_id, text="Unknown button")
                 return
 
-            # remove buttons
-            query.edit_message_reply_markup(reply_markup=keyboard)
             context.bot.answer_callback_query(query_id, text=answer_text)
+            self.update_messages()
         except HTTPError as e:
             LOGGER.error(e)
             bot.answer_callback_query(query_id, text=f"{e.response.content.decode('utf-8')}")
@@ -474,6 +466,19 @@ class KeelTelegramBot:
         keyboard = list(map(lambda x: InlineKeyboardButton(x[0], callback_data=x[1]), items.items()))
         return InlineKeyboardMarkup.from_column(keyboard)
 
+    def create_approval_notification_menu(self, item: dict) -> InlineKeyboardMarkup:
+        keyboard_items = {}
+        if item["archived"]:
+            keyboard_items["Approved"] = BUTTON_DATA_NOTHING
+        elif item["rejected"]:
+            keyboard_items["Rejected"] = BUTTON_DATA_NOTHING
+        else:
+            if item["votesRequired"] <= item["votesReceived"]:
+                keyboard_items["Approve"] = BUTTON_DATA_APPROVE
+                keyboard_items["Reject"] = BUTTON_DATA_REJECT
+
+        return self._build_inline_keyboard(keyboard_items)
+
     def _register_message(self, chat_id: int, message_id: int, approval_id: str, approval_identifier: str):
         """
         Registers a telegram message, that corresponds with an approval notification.
@@ -487,11 +492,12 @@ class KeelTelegramBot:
         key = f"{approval_id}_{approval_identifier}"
         self._message_map.setdefault(key, {}).setdefault(chat_id, set()).add(message_id)
 
-    def update_messages(self, approvals: List[dict]):
+    def update_messages(self):
         """
-        Updates existing approval messages
-        :param approvals: approvals data
+        Fetch approvals and update existing approval messages accordingly
         """
+        approvals = self._api_client.get_approvals()
+
         for approval in approvals:
             approval_id = approval["id"]
             approval_identifier = approval["identifier"]
@@ -501,17 +507,16 @@ class KeelTelegramBot:
             failed_messages = set()
             for chat_id, message_ids in chats.items():
                 for message_id in message_ids:
-                    approval_str = approval_to_str(approval)
                     try:
+                        approval_str = approval_to_str(approval)
+                        menu = self.create_approval_notification_menu(approval)
                         self.bot.edit_message_text(
                             approval_str,
                             chat_id=chat_id,
                             message_id=message_id,
-                            parse_mode=ParseMode.HTML
+                            parse_mode=ParseMode.HTML,
+                            menu=menu
                         )
-
-                        # TODO: if approval was rejected/approved, remove buttons
-                        # self._bot.bot.edit_message_reply_markup(reply_markup=keyboard)
                     except Exception as ex:
                         failed_messages.add(message_id)
                         LOGGER.exception(ex)
