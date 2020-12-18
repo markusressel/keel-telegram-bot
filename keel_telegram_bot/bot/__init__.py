@@ -503,7 +503,12 @@ class KeelTelegramBot:
                 for message_id in message_ids:
                     approval_str = approval_to_str(approval)
                     try:
-                        self.bot.edit_message_text(approval_str, chat_id=chat_id, message_id=message_id)
+                        self.bot.edit_message_text(
+                            approval_str,
+                            chat_id=chat_id,
+                            message_id=message_id,
+                            parse_mode=ParseMode.HTML
+                        )
 
                         # TODO: if approval was rejected/approved, remove buttons
                         # self._bot.bot.edit_message_reply_markup(reply_markup=keyboard)

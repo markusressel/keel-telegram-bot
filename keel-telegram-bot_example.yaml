@@ -6,6 +6,8 @@ keel-telegram-bot:
     ssl: true
     username: myuser
     password: mypassword
+  monitor:
+    interval: 10s
   telegram:
     admin_usernames:
       - myadminuser
