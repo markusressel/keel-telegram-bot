@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Dict, List
+from typing import Dict
 
 from container_app_conf.formatter.toml import TomlFormatter
 from requests import HTTPError
@@ -473,7 +473,7 @@ class KeelTelegramBot:
         elif item["rejected"]:
             keyboard_items["Rejected"] = BUTTON_DATA_NOTHING
         else:
-            if item["votesRequired"] <= item["votesReceived"]:
+            if item["votesRequired"] > item["votesReceived"]:
                 keyboard_items["Approve"] = BUTTON_DATA_APPROVE
                 keyboard_items["Reject"] = BUTTON_DATA_REJECT
 
