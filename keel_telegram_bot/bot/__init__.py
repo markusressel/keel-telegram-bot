@@ -515,7 +515,7 @@ class KeelTelegramBot:
                             chat_id=chat_id,
                             message_id=message_id,
                             parse_mode=ParseMode.HTML,
-                            menu=menu
+                            reply_markup=menu
                         )
                     except Exception as ex:
                         failed_messages.add(message_id)
