@@ -522,4 +522,4 @@ class KeelTelegramBot:
                         LOGGER.exception(ex)
 
                 for failure in failed_messages:
-                    message_ids.pop(failure)
+                    message_ids.remove(failure)
