@@ -1,0 +1,31 @@
+version: 2
+registries:
+  python-index-pypi-python-org-simple:
+    type: python-index
+    url: https://pypi.python.org/simple/
+    username: "${{secrets.PYTHON_INDEX_PYPI_PYTHON_ORG_SIMPLE_USERNAME}}"
+    password: "${{secrets.PYTHON_INDEX_PYPI_PYTHON_ORG_SIMPLE_PASSWORD}}"
+
+updates:
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "16:00"
+    timezone: Europe/Berlin
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: urllib3
+    versions:
+    - 1.26.4
+  - dependency-name: prometheus-client
+    versions:
+    - 0.10.0
+  - dependency-name: python-telegram-bot
+    versions:
+    - "13.2"
+  - dependency-name: emoji
+    versions:
+    - 1.2.0
+  registries:
+  - python-index-pypi-python-org-simple
