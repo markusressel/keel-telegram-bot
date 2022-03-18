@@ -143,7 +143,7 @@ class Config(ConfigBase):
         description="Interval to check for new pending approvals",
         key_path=[
             NODE_MAIN,
-            "monitor"
+            "monitor",
             "interval"
         ],
         default="1m",
