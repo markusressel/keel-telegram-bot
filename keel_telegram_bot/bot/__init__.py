@@ -57,7 +57,7 @@ class KeelTelegramBot:
                 CommandHandler(COMMAND_DELETE,
                                filters=(~ Filters.reply) & (~ Filters.forwarded),
                                callback=self._delete_callback),
-                CommandHandler(COMMAND_GET_CHAT_ID,
+                CommandHandler(COMMAND_CHAT_ID,
                                filters=(~ Filters.reply) & (~ Filters.forwarded),
                                callback=self._getchatid_callback),
 
@@ -378,7 +378,7 @@ class KeelTelegramBot:
                      reply_to=message.message_id)
 
     @command(
-        name=COMMAND_GET_CHAT_ID,
+        name=COMMAND_CHAT_ID,
         description="Print chat ID.",
         permissions=CONFIG_ADMINS,
     )
