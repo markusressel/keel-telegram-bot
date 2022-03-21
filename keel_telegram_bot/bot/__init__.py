@@ -57,6 +57,9 @@ class KeelTelegramBot:
                 CommandHandler(COMMAND_DELETE,
                                filters=(~ Filters.reply) & (~ Filters.forwarded),
                                callback=self._delete_callback),
+                CommandHandler(COMMAND_GET_CHAT_ID,
+                               filters=(~ Filters.reply) & (~ Filters.forwarded),
+                               callback=self._getchatid_callback),
 
                 CommandHandler(COMMAND_HELP,
                                filters=(~ Filters.reply) & (~ Filters.forwarded),
@@ -373,6 +376,19 @@ class KeelTelegramBot:
         send_message(bot, chat_id, text,
                      parse_mode=ParseMode.MARKDOWN,
                      reply_to=message.message_id)
+
+    @command(
+        name=COMMAND_GET_CHAT_ID,
+        description="Print chat ID.",
+        permissions=CONFIG_ADMINS,
+    )
+    def _getchatid_callback(self, update: Update, context: CallbackContext):
+        bot = context.bot
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+
+        text = update.message.chat_id
+        send_message(bot, chat_id, str(text), reply_to=message.message_id)
 
     @command(
         name=COMMAND_VERSION,
