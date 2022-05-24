@@ -14,6 +14,8 @@
 * [x] Approve pending approvals
 * [x] Reject pending approvals
 * [x] Delete archived approvals
+* [x] Permission handling based on telegram usernames
+* [x] Filter visible approvals on a per-chat basis
 
 # How to use
 
