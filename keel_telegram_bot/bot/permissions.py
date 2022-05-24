@@ -25,7 +25,7 @@ class _ConfigChatId(Permission):
 
     def evaluate(self, update: Update, context: CallbackContext) -> bool:
         chat_id = update.effective_message.chat_id
-        return chat_id in self._config.TELEGRAM_CHAT_IDS.value
+        return str(chat_id) in self._config.TELEGRAM_CHAT_IDS.value
 
 
 CONFIGURED_CHAT_ID = _ConfigChatId()
