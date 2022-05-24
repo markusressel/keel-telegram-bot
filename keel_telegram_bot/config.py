@@ -155,7 +155,7 @@ class Config(ConfigBase):
         required=True,
     )
 
-    FILTER_NAMESPACE = ListConfigEntry(
+    TELEGRAM_FILTERS = ListConfigEntry(
         description="Per chat-id filter to apply to the list of approvals",
         key_path=[
             NODE_MAIN,

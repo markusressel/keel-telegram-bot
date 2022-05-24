@@ -9,8 +9,9 @@ from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, Callb
 from telegram_click.argument import Argument, Flag
 from telegram_click.decorator import command
 
+from keel_telegram_bot import util
 from keel_telegram_bot.api_client import KeelApiClient
-from keel_telegram_bot.bot.permissions import CONFIG_ADMINS
+from keel_telegram_bot.bot.permissions import CONFIG_ADMINS, CONFIGURED_CHAT_ID
 from keel_telegram_bot.bot.reply_keyboard_handler import ReplyKeyboardHandler
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.stats import *
@@ -129,7 +130,7 @@ class KeelTelegramBot:
                  Flag(name=["approved", "a"], description="Include approved items"),
                  Flag(name=["rejected", "r"], description="Include rejected items"),
              ],
-             permissions=CONFIG_ADMINS)
+             permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     def _list_approvals_callback(self, update: Update, context: CallbackContext,
                                  archived: bool, approved: bool, rejected: bool) -> None:
         """
@@ -140,7 +141,7 @@ class KeelTelegramBot:
         chat_id = update.effective_chat.id
 
         items = self._api_client.get_approvals()
-        items = list(filter(lambda x: not self._should_filter_for(chat_id, x["identifier"]), items))
+        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x["identifier"]), items))
 
         rejected_items = list(filter(lambda x: x[KEY_REJECTED], items))
         archived_items = list(filter(lambda x: x[KEY_ARCHIVED], items))
@@ -189,7 +190,7 @@ class KeelTelegramBot:
                           example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
-             permissions=CONFIG_ADMINS)
+             permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     def _approve_callback(self, update: Update, context: CallbackContext,
                           identifier: str, voter: str or None) -> None:
         """
@@ -210,7 +211,7 @@ class KeelTelegramBot:
             send_message(bot, chat_id, text, reply_to=message.message_id, menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
-        items = list(filter(lambda x: not self._should_filter_for(chat_id, x["identifier"]), items))
+        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x["identifier"]), items))
 
         # compare to the "id" first
         exact_matches = list(filter(lambda x: x["id"] == identifier, items))
@@ -232,7 +233,7 @@ class KeelTelegramBot:
                           example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
-             permissions=CONFIG_ADMINS)
+             permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     def _reject_callback(self, update: Update, context: CallbackContext,
                          identifier: str, voter: str or None) -> None:
         """
@@ -254,7 +255,7 @@ class KeelTelegramBot:
             send_message(bot, chat_id, text, reply_to=message.message_id, menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
-        items = list(filter(lambda x: not self._should_filter_for(chat_id, x["identifier"]), items))
+        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x["identifier"]), items))
 
         # compare to the "id" first
         exact_matches = list(filter(lambda x: x["id"] == identifier, items))
@@ -276,7 +277,7 @@ class KeelTelegramBot:
                           example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
-             permissions=CONFIG_ADMINS)
+             permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     def _delete_callback(self, update: Update, context: CallbackContext,
                          identifier: str, voter: str or None) -> None:
         """
@@ -296,7 +297,7 @@ class KeelTelegramBot:
             send_message(bot, chat_id, text, reply_to=message.message_id, menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals()
-        items = list(filter(lambda x: not self._should_filter_for(chat_id, x["identifier"]), items))
+        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x["identifier"]), items))
 
         # compare to the "id" first
         exact_matches = list(filter(lambda x: x["id"] == identifier, items))
@@ -332,7 +333,7 @@ class KeelTelegramBot:
 
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
 
-            if self._should_filter_for(chat_id, identifier):
+            if self._is_filtered_for(chat_id, identifier):
                 continue
 
             send_message(
@@ -353,7 +354,7 @@ class KeelTelegramBot:
 
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
 
-            if self._should_filter_for(chat_id, identifier):
+            if self._is_filtered_for(chat_id, identifier):
                 continue
 
             try:
@@ -369,7 +370,7 @@ class KeelTelegramBot:
     @command(
         name=COMMAND_CONFIG,
         description="Print bot config.",
-        permissions=CONFIG_ADMINS,
+        permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS,
     )
     def _config_callback(self, update: Update, context: CallbackContext):
         bot = context.bot
@@ -540,7 +541,7 @@ class KeelTelegramBot:
             failed_messages = set()
             for chat_id, message_ids in chats.items():
 
-                if self._should_filter_for(chat_id, approval_identifier):
+                if self._is_filtered_for(chat_id, approval_identifier):
                     continue
 
                 for message_id in message_ids:
@@ -561,14 +562,11 @@ class KeelTelegramBot:
                 for failure in failed_messages:
                     message_ids.remove(failure)
 
-    def _should_filter_for(self, chat_id: str, identifier: str) -> bool:
-        filter_config = self._config.FILTER_NAMESPACE.value
-        for config in filter_config:
-            filter_chat_id = config["chat_id"]
-            identifier_regex = config["identifier"]
+    def _is_filtered_for(self, chat_id: str, identifier: str) -> bool:
+        chat_ids = self._config.TELEGRAM_CHAT_IDS.value
+        filter_config = self._config.TELEGRAM_FILTERS.value
 
-            if filter_chat_id == chat_id:
-                if re.compile(identifier_regex).match(identifier) is not None:
-                    return True
+        chat_unknown = chat_id not in chat_ids
+        filter_doesnt_match = util._is_filtered_for(filter_config, chat_id, identifier)
 
-        return False
+        return chat_unknown or filter_doesnt_match

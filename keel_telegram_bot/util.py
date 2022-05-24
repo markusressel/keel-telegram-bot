@@ -1,8 +1,9 @@
 import functools
 import logging
 import operator
+import re
 from datetime import datetime, timezone, timedelta
-from typing import List, Any, Tuple
+from typing import List, Any, Tuple, Dict
 
 import iso8601
 from telegram import Bot, Message, ReplyMarkup
@@ -12,6 +13,18 @@ from keel_telegram_bot.config import Config
 LOGGER = logging.getLogger(__name__)
 
 CONFIG = Config()
+
+
+def _is_filtered_for(filters: List[Dict], chat_id: str, identifier: str) -> bool:
+    for config in filters:
+        filter_chat_id = config["chat_id"]
+        identifier_regex = config["identifier"]
+
+        if filter_chat_id == chat_id:
+            if re.compile(identifier_regex).match(identifier) is not None:
+                return True
+
+    return False
 
 
 def flatten(data: List[List[Any]]) -> List[Any]:

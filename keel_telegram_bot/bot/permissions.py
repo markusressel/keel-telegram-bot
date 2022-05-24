@@ -16,3 +16,16 @@ class _ConfigAdmins(Permission):
 
 
 CONFIG_ADMINS = _ConfigAdmins()
+
+
+class _ConfigChatId(Permission):
+
+    def __init__(self):
+        self._config = Config()
+
+    def evaluate(self, update: Update, context: CallbackContext) -> bool:
+        chat_id = update.effective_message.chat_id
+        return chat_id in self._config.TELEGRAM_CHAT_IDS.value
+
+
+CONFIGURED_CHAT_ID = _ConfigChatId()
