@@ -571,7 +571,8 @@ class KeelTelegramBot:
         chat_unknown = str(chat_id) not in chat_ids
         filter_doesnt_match = util._is_filtered_for(filter_config, str(chat_id), identifier)
 
+        result = chat_unknown or filter_doesnt_match
         LOGGER.debug(
-            f"Filtered identifier '{identifier}' for chat {chat_id} because: chat_unknown: {chat_unknown}, filter_doesnt_match: {filter_doesnt_match}")
+            f"Filtered identifier '{identifier}' for chat {chat_id} because: chat_unknown: {chat_unknown}, filter_doesnt_match: {filter_doesnt_match}, result: {result}")
 
-        return chat_unknown or filter_doesnt_match
+        return result
