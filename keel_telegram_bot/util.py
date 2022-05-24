@@ -21,7 +21,9 @@ def _is_filtered_for(filters: List[Dict], chat_id: str, identifier: str) -> bool
         identifier_regex = config["identifier"]
 
         if str(filter_chat_id) == str(chat_id):
-            if re.compile(identifier_regex).match(identifier) is not None:
+            identifier_pattern = re.compile(identifier_regex)
+            result = identifier_pattern.search(identifier)
+            if result is None:
                 return True
 
     return False
