@@ -355,8 +355,10 @@ class KeelTelegramBot:
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
 
             if self._is_filtered_for(chat_id, identifier):
+                LOGGER.debug(f"Skipping new pending approval for chat '{chat_id}' due to filters")
                 continue
 
+            LOGGER.debug(f"Sending pending approval message to '{chat_id}'")
             try:
                 response = send_message(
                     self.bot, chat_id,
@@ -563,10 +565,13 @@ class KeelTelegramBot:
                     message_ids.remove(failure)
 
     def _is_filtered_for(self, chat_id: str or int, identifier: str) -> bool:
-        chat_ids: List[int] = self._config.TELEGRAM_CHAT_IDS.value
+        chat_ids: List[str] = self._config.TELEGRAM_CHAT_IDS.value
         filter_config: List[Dict] = self._config.TELEGRAM_FILTERS.value
 
         chat_unknown = str(chat_id) not in chat_ids
         filter_doesnt_match = util._is_filtered_for(filter_config, str(chat_id), identifier)
+
+        LOGGER.debug(
+            f"Filtered identifier '{identifier}' for chat {chat_id} because: chat_unknown: {chat_unknown}, filter_doesnt_match: {filter_doesnt_match}")
 
         return chat_unknown or filter_doesnt_match
