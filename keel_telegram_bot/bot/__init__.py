@@ -566,7 +566,7 @@ class KeelTelegramBot:
         chat_ids = self._config.TELEGRAM_CHAT_IDS.value
         filter_config = self._config.TELEGRAM_FILTERS.value
 
-        chat_unknown = chat_id not in chat_ids
-        filter_doesnt_match = util._is_filtered_for(filter_config, chat_id, identifier)
+        chat_unknown = str(chat_id) not in chat_ids
+        filter_doesnt_match = util._is_filtered_for(filter_config, str(chat_id), identifier)
 
         return chat_unknown or filter_doesnt_match

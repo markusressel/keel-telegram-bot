@@ -20,7 +20,7 @@ def _is_filtered_for(filters: List[Dict], chat_id: str, identifier: str) -> bool
         filter_chat_id = config["chat_id"]
         identifier_regex = config["identifier"]
 
-        if filter_chat_id == chat_id:
+        if str(filter_chat_id) == str(chat_id):
             if re.compile(identifier_regex).match(identifier) is not None:
                 return True
 
