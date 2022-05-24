@@ -35,6 +35,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: ghcr.io/markusressel/keel-telegram-bot
+          tags: latest
 
       - name: Build and push Docker image
         id: build-and-push
