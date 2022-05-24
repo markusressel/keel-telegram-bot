@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Dict
+from typing import Dict, List
 
 from container_app_conf.formatter.toml import TomlFormatter
 from requests import HTTPError
@@ -562,9 +562,9 @@ class KeelTelegramBot:
                 for failure in failed_messages:
                     message_ids.remove(failure)
 
-    def _is_filtered_for(self, chat_id: str, identifier: str) -> bool:
-        chat_ids = self._config.TELEGRAM_CHAT_IDS.value
-        filter_config = self._config.TELEGRAM_FILTERS.value
+    def _is_filtered_for(self, chat_id: str or int, identifier: str) -> bool:
+        chat_ids: List[int] = self._config.TELEGRAM_CHAT_IDS.value
+        filter_config: List[Dict] = self._config.TELEGRAM_FILTERS.value
 
         chat_unknown = str(chat_id) not in chat_ids
         filter_doesnt_match = util._is_filtered_for(filter_config, str(chat_id), identifier)
