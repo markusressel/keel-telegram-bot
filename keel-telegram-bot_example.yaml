@@ -16,6 +16,9 @@ keel-telegram-bot:
     chat_ids:
       - 12345678
       - 87654321
+    filters:
+      - chat_id: 12345678
+        identifier: ".*something.*"
   stats:
     enabled: true
     port: 8000

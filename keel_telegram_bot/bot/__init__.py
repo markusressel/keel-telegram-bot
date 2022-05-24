@@ -140,6 +140,7 @@ class KeelTelegramBot:
         chat_id = update.effective_chat.id
 
         items = self._api_client.get_approvals()
+        items = list(filter(lambda x: not self._should_filter_for(chat_id, x["identifier"]), items))
 
         rejected_items = list(filter(lambda x: x[KEY_REJECTED], items))
         archived_items = list(filter(lambda x: x[KEY_ARCHIVED], items))
@@ -194,6 +195,8 @@ class KeelTelegramBot:
         """
         Approve a pending item
         """
+        chat_id = update.effective_chat.id
+
         if voter is None:
             voter = update.effective_user.full_name
 
@@ -207,6 +210,7 @@ class KeelTelegramBot:
             send_message(bot, chat_id, text, reply_to=message.message_id, menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
+        items = list(filter(lambda x: not self._should_filter_for(chat_id, x["identifier"]), items))
 
         # compare to the "id" first
         exact_matches = list(filter(lambda x: x["id"] == identifier, items))
@@ -234,6 +238,7 @@ class KeelTelegramBot:
         """
         Reject a pending item
         """
+        chat_id = update.effective_chat.id
         if voter is None:
             voter = update.effective_user.full_name
         if not voter:
@@ -249,6 +254,7 @@ class KeelTelegramBot:
             send_message(bot, chat_id, text, reply_to=message.message_id, menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
+        items = list(filter(lambda x: not self._should_filter_for(chat_id, x["identifier"]), items))
 
         # compare to the "id" first
         exact_matches = list(filter(lambda x: x["id"] == identifier, items))
@@ -276,6 +282,7 @@ class KeelTelegramBot:
         """
         Delete an archived item
         """
+        chat_id = update.effective_chat.id
         if voter is None:
             voter = update.effective_user.full_name
 
@@ -289,6 +296,7 @@ class KeelTelegramBot:
             send_message(bot, chat_id, text, reply_to=message.message_id, menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals()
+        items = list(filter(lambda x: not self._should_filter_for(chat_id, x["identifier"]), items))
 
         # compare to the "id" first
         exact_matches = list(filter(lambda x: x["id"] == identifier, items))
@@ -323,6 +331,10 @@ class KeelTelegramBot:
         ])
 
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
+
+            if self._should_filter_for(chat_id, identifier):
+                continue
+
             send_message(
                 self.bot, chat_id,
                 text, parse_mode=ParseMode.HTML,
@@ -335,10 +347,15 @@ class KeelTelegramBot:
         including an inline keyboard to all configured chat ids
         :param item: new pending approval
         """
+        identifier = item["identifier"]
         text = approval_to_str(item)
         menu = self.create_approval_notification_menu(item)
 
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
+
+            if self._should_filter_for(chat_id, identifier):
+                continue
+
             try:
                 response = send_message(
                     self.bot, chat_id,
@@ -522,6 +539,10 @@ class KeelTelegramBot:
             chats = self._message_map.get(key, {})
             failed_messages = set()
             for chat_id, message_ids in chats.items():
+
+                if self._should_filter_for(chat_id, approval_identifier):
+                    continue
+
                 for message_id in message_ids:
                     try:
                         approval_str = approval_to_str(approval)
@@ -539,3 +560,15 @@ class KeelTelegramBot:
 
                 for failure in failed_messages:
                     message_ids.remove(failure)
+
+    def _should_filter_for(self, chat_id: str, identifier: str) -> bool:
+        filter_config = self._config.FILTER_NAMESPACE.value
+        for config in filter_config:
+            filter_chat_id = config["chat_id"]
+            identifier_regex = config["identifier"]
+
+            if filter_chat_id == chat_id:
+                if re.compile(identifier_regex).match(identifier) is not None:
+                    return True
+
+        return False

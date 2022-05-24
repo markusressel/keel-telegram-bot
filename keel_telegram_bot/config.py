@@ -1,8 +1,10 @@
 import logging
 import re
 
+import voluptuous
 from container_app_conf import ConfigBase
 from container_app_conf.entry.bool import BoolConfigEntry
+from container_app_conf.entry.dict import DictConfigEntry
 from container_app_conf.entry.int import IntConfigEntry
 from container_app_conf.entry.list import ListConfigEntry
 from container_app_conf.entry.string import StringConfigEntry
@@ -10,6 +12,7 @@ from container_app_conf.entry.timedelta import TimeDeltaConfigEntry
 from container_app_conf.source.env_source import EnvSource
 from container_app_conf.source.toml_source import TomlSource
 from container_app_conf.source.yaml_source import YamlSource
+from voluptuous import Schema
 
 NODE_MAIN = "keel-telegram-bot"
 
@@ -18,6 +21,8 @@ NODE_TELEGRAM = "telegram"
 NODE_KEEL = "keel"
 NODE_HOST = "host"
 NODE_WEBHOOK = "webhook"
+
+NODE_FILTERS = "filters"
 
 NODE_STATS = "stats"
 NODE_ENABLED = "enabled"
@@ -148,6 +153,23 @@ class Config(ConfigBase):
         ],
         default="1m",
         required=True,
+    )
+
+    FILTER_NAMESPACE = ListConfigEntry(
+        description="Per chat-id filter to apply to the list of approvals",
+        key_path=[
+            NODE_MAIN,
+            NODE_TELEGRAM,
+            NODE_FILTERS,
+        ],
+        item_type=DictConfigEntry,
+        item_args={
+            "schema": Schema({
+                voluptuous.Required('chat_id'): str,
+                voluptuous.Required('identifier'): str,
+            })
+        },
+        default=None,
     )
 
     STATS_ENABLED = BoolConfigEntry(
