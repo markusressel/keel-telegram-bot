@@ -6,7 +6,8 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Any, Tuple, Dict
 
 import iso8601
-from telegram import Bot, Message, ReplyMarkup
+from telegram import Bot, Message
+from telegram._utils.types import ReplyMarkup
 
 from keel_telegram_bot.config import Config
 
@@ -48,8 +49,8 @@ def format_for_single_line_log(text: str) -> str:
     return " ".join(text.split())
 
 
-def send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = None, reply_to: int = None,
-                 menu: ReplyMarkup = None) -> Message:
+async def send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = None, reply_to: int = None,
+                       menu: ReplyMarkup = None) -> Message:
     """
     Sends a text message to the given chat
     :param bot: the bot
@@ -62,8 +63,11 @@ def send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = None, r
     from emoji import emojize
 
     emojized_text = emojize(message)
-    return bot.send_message(chat_id=chat_id, parse_mode=parse_mode, text=emojized_text, reply_to_message_id=reply_to,
-                            reply_markup=menu)
+    return await bot.send_message(
+        chat_id=chat_id, parse_mode=parse_mode, text=emojized_text,
+        reply_to_message_id=reply_to,
+        reply_markup=menu
+    )
 
 
 def fuzzy_match(term: str, choices: List[Any], limit: int = None, key=lambda x: x, ignorecase: bool = True) -> List[

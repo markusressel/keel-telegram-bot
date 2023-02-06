@@ -10,7 +10,7 @@ class _ConfigAdmins(Permission):
     def __init__(self):
         self._config = Config()
 
-    def evaluate(self, update: Update, context: CallbackContext) -> bool:
+    async def evaluate(self, update: Update, context: CallbackContext) -> bool:
         from_user = update.effective_message.from_user
         return from_user.username in self._config.TELEGRAM_ADMIN_USERNAMES.value
 
@@ -23,7 +23,7 @@ class _ConfigChatId(Permission):
     def __init__(self):
         self._config = Config()
 
-    def evaluate(self, update: Update, context: CallbackContext) -> bool:
+    async def evaluate(self, update: Update, context: CallbackContext) -> bool:
         chat_id = update.effective_message.chat_id
         return str(chat_id) in self._config.TELEGRAM_CHAT_IDS.value
 
