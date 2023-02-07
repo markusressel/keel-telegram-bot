@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 from typing import Dict, List
@@ -38,8 +39,6 @@ class KeelTelegramBot:
         self._response_handler = ReplyKeyboardHandler()
 
         self._app = ApplicationBuilder().token(self._config.TELEGRAM_BOT_TOKEN.value).build()
-
-        LOGGER.debug(f"Using bot id '{self._app.bot.id}' ({self._app.bot.name})")
 
         handler_groups = {
             0: [CallbackQueryHandler(callback=self._inline_keyboard_click_callback)],
@@ -97,6 +96,9 @@ class KeelTelegramBot:
         """
         Starts up the bot.
         """
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self._app.initialize())
+        LOGGER.debug(f"Using bot id '{self._app.bot.id}' ({self._app.bot.name})")
         self._app.run_polling()
 
     def stop(self):
