@@ -21,7 +21,7 @@ class Monitor(RegularIntervalWorker):
         self._old = None
 
     @APPROVAL_WATCHER_TIME.time()
-    def _run(self):
+    async def _run(self):
         """
         Called repeatedly
         """
@@ -29,7 +29,7 @@ class Monitor(RegularIntervalWorker):
 
         try:
             # update existing messages
-            self._bot.update_messages()
+            await self._bot.update_messages()
         except Exception as ex:
             LOGGER.exception(ex)
 
@@ -42,4 +42,4 @@ class Monitor(RegularIntervalWorker):
 
         for item in new_pending:
             NEW_PENDING_APPROVAL_COUNTER.inc()
-            self._bot.on_new_pending_approval(item)
+            await self._bot.on_new_pending_approval(item)
