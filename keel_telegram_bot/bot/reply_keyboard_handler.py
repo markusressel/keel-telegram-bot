@@ -107,7 +107,7 @@ class ReplyKeyboardHandler:
             "callback_data": callback_data
         }
 
-    def cancel_keyboard_callback(self, update: Update, context: CallbackContext):
+    async def cancel_keyboard_callback(self, update: Update, context: CallbackContext):
         bot = context.bot
         chat_id = update.effective_chat.id
         user_id = update.effective_user.id
