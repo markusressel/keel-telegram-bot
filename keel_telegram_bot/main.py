@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sys
@@ -25,6 +26,9 @@ def main():
     logging.getLogger("keel_telegram_bot").setLevel(log_level)
 
     LOGGER.debug("Config:\n{}".format(config.print(TomlFormatter())))
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
     # start prometheus server
     if config.STATS_ENABLED.value:

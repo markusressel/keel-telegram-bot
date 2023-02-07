@@ -47,7 +47,7 @@ class RegularIntervalWorker:
         The regularly executed task. Override this method.
         """
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.new_event_loop()
             loop.run_until_complete(self._run())
         except Exception as e:
             LOGGER.error(e, exc_info=True)
