@@ -450,7 +450,7 @@ class KeelTelegramBot:
         :param update: the chat update object
         :param context: telegram context
         """
-        self._response_handler.on_message(update, context)
+        await self._response_handler.on_message(update, context)
 
     async def _inline_keyboard_click_callback(self, update: Update, context: CallbackContext):
         """

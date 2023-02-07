@@ -18,7 +18,7 @@ class ReplyKeyboardHandler:
     def __init__(self):
         pass
 
-    def on_message(self, update: Update, context: CallbackContext):
+    async def on_message(self, update: Update, context: CallbackContext):
         user_id = update.effective_user.id
         text = update.effective_message.text
 
