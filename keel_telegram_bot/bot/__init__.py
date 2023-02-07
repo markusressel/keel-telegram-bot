@@ -92,20 +92,21 @@ class KeelTelegramBot:
     def bot(self):
         return self._app.bot
 
-    def start(self):
+    async def start(self):
         """
         Starts up the bot.
         """
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self._app.initialize())
+        await self._app.initialize()
         LOGGER.debug(f"Using bot id '{self._app.bot.id}' ({self._app.bot.name})")
-        self._app.run_polling()
+        await self._app.start()
+        await self._app.updater.start_polling()
 
     def stop(self):
         """
         Shuts down the bot.
         """
-        self._app.stop()
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self._app.shutdown())
 
     @COMMAND_TIME_START.time()
     async def _start_callback(self, update: Update, context: CallbackContext) -> None:

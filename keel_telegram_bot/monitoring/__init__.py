@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import threading
 
@@ -46,13 +47,14 @@ class RegularIntervalWorker:
         The regularly executed task. Override this method.
         """
         try:
-            self._run()
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(self._run())
         except Exception as e:
             LOGGER.error(e, exc_info=True)
         finally:
             self._schedule_next_run()
 
-    def _run(self):
+    async def _run(self):
         """
         The regularly executed task. Override this method.
         """
