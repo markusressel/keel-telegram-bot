@@ -8,26 +8,26 @@ registries:
 
 updates:
   - package-ecosystem: github-actions
-- package-ecosystem: pip
-  insecure-external-code-execution: allow
-  directory: "/"
-  schedule:
-    interval: daily
-    time: "16:00"
-    timezone: Europe/Berlin
-  open-pull-requests-limit: 10
-  ignore:
-  - dependency-name: urllib3
-    versions:
-    - 1.26.4
-  - dependency-name: prometheus-client
-    versions:
-    - 0.10.0
-  - dependency-name: python-telegram-bot
-    versions:
-    - "13.2"
-  - dependency-name: emoji
-    versions:
-    - 1.2.0
-  registries:
-  - python-index-pypi-python-org-simple
+  - package-ecosystem: pip
+    insecure-external-code-execution: allow
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "16:00"
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: urllib3
+        versions:
+          - 1.26.4
+      - dependency-name: prometheus-client
+        versions:
+          - 0.10.0
+      - dependency-name: python-telegram-bot
+        versions:
+          - "13.2"
+      - dependency-name: emoji
+        versions:
+          - 1.2.0
+    registries:
+      - python-index-pypi-python-org-simple
