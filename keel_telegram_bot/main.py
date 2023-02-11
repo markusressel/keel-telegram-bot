@@ -43,16 +43,20 @@ def main():
     )
 
     bot = KeelTelegramBot(config, api_client)
-    bot.start()
-
     monitor = Monitor(config, api_client, bot)
-    monitor.start()
-
     server = WebsocketServer(config, bot)
-    server.run()
 
-    monitor.stop()
-    bot.stop()
+    tasks = asyncio.gather(
+        bot.start(),
+        monitor.start(),
+        server.start(),
+    )
+
+    loop.run_until_complete(tasks)
+    loop.run_forever()
+
+    # monitor.stop()
+    # bot.stop()
 
 
 if __name__ == '__main__':
