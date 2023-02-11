@@ -1,9 +1,8 @@
-import unittest
-
 from keel_telegram_bot.util import approval_to_str
+from tests import TestBase
 
 
-class DummyTest(unittest.TestCase):
+class DummyTest(TestBase):
 
     def test_dummy(self):
         self.assertTrue(True)
