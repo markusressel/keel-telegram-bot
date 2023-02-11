@@ -6,8 +6,8 @@ from typing import Dict, List
 from container_app_conf.formatter.toml import TomlFormatter
 from requests import HTTPError
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
-from telegram.ext import CommandHandler, filters, MessageHandler, CallbackContext, CallbackQueryHandler, \
-    ApplicationBuilder
+from telegram.ext import CommandHandler, filters, MessageHandler, CallbackQueryHandler, \
+    ApplicationBuilder, ContextTypes
 from telegram_click.argument import Argument, Flag
 from telegram_click.decorator import command
 
@@ -109,7 +109,7 @@ class KeelTelegramBot:
         loop.run_until_complete(self._app.shutdown())
 
     @COMMAND_TIME_START.time()
-    async def _start_callback(self, update: Update, context: CallbackContext) -> None:
+    async def _start_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Welcomes a new user with a greeting message
         :param update: the chat update object
@@ -135,7 +135,7 @@ class KeelTelegramBot:
                  Flag(name=["rejected", "r"], description="Include rejected items"),
              ],
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
-    async def _list_approvals_callback(self, update: Update, context: CallbackContext,
+    async def _list_approvals_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
                                        archived: bool, approved: bool, rejected: bool) -> None:
         """
         List pending approvals
@@ -195,7 +195,7 @@ class KeelTelegramBot:
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
-    async def _approve_callback(self, update: Update, context: CallbackContext,
+    async def _approve_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
                                 identifier: str, voter: str or None) -> None:
         """
         Approve a pending item
@@ -205,7 +205,7 @@ class KeelTelegramBot:
         if voter is None:
             voter = update.effective_user.full_name
 
-        async def execute(update: Update, context: CallbackContext, item: dict, data: dict):
+        async def execute(update: Update, context: ContextTypes.DEFAULT_TYPE, item: dict, data: dict):
             bot = context.bot
             message = update.effective_message
             chat_id = update.effective_chat.id
@@ -239,7 +239,7 @@ class KeelTelegramBot:
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
-    async def _reject_callback(self, update: Update, context: CallbackContext,
+    async def _reject_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
                                identifier: str, voter: str or None) -> None:
         """
         Reject a pending item
@@ -250,7 +250,7 @@ class KeelTelegramBot:
         if not voter:
             voter = update.effective_user.name
 
-        async def execute(update: Update, context: CallbackContext, item: dict, data: dict):
+        async def execute(update: Update, context: ContextTypes.DEFAULT_TYPE, item: dict, data: dict):
             bot = context.bot
             message = update.effective_message
             chat_id = update.effective_chat.id
@@ -284,7 +284,7 @@ class KeelTelegramBot:
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
-    async def _delete_callback(self, update: Update, context: CallbackContext,
+    async def _delete_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
                                identifier: str, voter: str or None) -> None:
         """
         Delete an archived item
@@ -293,7 +293,7 @@ class KeelTelegramBot:
         if voter is None:
             voter = update.effective_user.full_name
 
-        async def execute(update: Update, context: CallbackContext, item: dict, data: dict):
+        async def execute(update: Update, context: ContextTypes.DEFAULT_TYPE, item: dict, data: dict):
             bot = context.bot
             message = update.effective_message
             chat_id = update.effective_chat.id
@@ -381,7 +381,7 @@ class KeelTelegramBot:
         description="Print bot config.",
         permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS,
     )
-    async def _config_callback(self, update: Update, context: CallbackContext):
+    async def _config_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot = context.bot
         message = update.effective_message
         chat_id = update.effective_chat.id
@@ -393,7 +393,7 @@ class KeelTelegramBot:
         description="List commands supported by this bot.",
         permissions=CONFIG_ADMINS,
     )
-    async def _help_callback(self, update: Update, context: CallbackContext):
+    async def _help_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot = context.bot
         message = update.effective_message
         chat_id = update.effective_chat.id
@@ -409,7 +409,7 @@ class KeelTelegramBot:
         description="Print chat ID.",
         permissions=CONFIG_ADMINS,
     )
-    async def _chatid_callback(self, update: Update, context: CallbackContext):
+    async def _chatid_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot = context.bot
         message = update.effective_message
         chat_id = update.effective_chat.id
@@ -422,7 +422,7 @@ class KeelTelegramBot:
         description="Print bot version.",
         permissions=CONFIG_ADMINS,
     )
-    async def _version_callback(self, update: Update, context: CallbackContext):
+    async def _version_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot = context.bot
         message = update.effective_message
         chat_id = update.effective_chat.id
@@ -431,7 +431,7 @@ class KeelTelegramBot:
         text = __version__
         await send_message(bot, chat_id, text, reply_to=message.message_id)
 
-    async def _unknown_command_callback(self, update: Update, context: CallbackContext) -> None:
+    async def _unknown_command_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Handles unknown commands send by a user
         :param update: the chat update object
@@ -447,7 +447,7 @@ class KeelTelegramBot:
             await self._help_callback(update, context)
             return
 
-    async def _any_message_callback(self, update: Update, context: CallbackContext) -> None:
+    async def _any_message_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """
         Used to respond to response keyboard entry selections
         :param update: the chat update object
@@ -455,7 +455,7 @@ class KeelTelegramBot:
         """
         await self._response_handler.on_message(update, context)
 
-    async def _inline_keyboard_click_callback(self, update: Update, context: CallbackContext):
+    async def _inline_keyboard_click_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
         Handles inline keyboard button click callbacks
         :param update:
