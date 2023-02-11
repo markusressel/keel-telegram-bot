@@ -9,10 +9,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       # this writes the tag name into GIT_TAG_NAME
       - name: Get tag name
-        uses: olegtarasov/get-tag@v2
+        uses: olegtarasov/get-tag@v2.1.2
       - name: Build the Docker image
         run: docker build . --file Dockerfile --tag markusressel/keel-telegram-bot:$GIT_TAG_NAME
       - name: Login to DockerHub Registry
