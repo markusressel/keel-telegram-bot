@@ -6,12 +6,14 @@ name = "pypi"
 [packages]
 iso8601 = "*"
 requests = "*"
-flask = ">=1.1.1"
+aiohttp = "*"
+flask = { extras = ["async"], version = ">=1.1.1" }
 container-app-conf = ">=5.0.0"
-python-telegram-bot = ">=12"
-telegram-click = ">=5.0.1"
+python-telegram-bot = ">=20"
+telegram-click = ">=6.0.1"
 emoji = "*"
 prometheus-client = "*"
+prometheus_async = "*"
 fuzzywuzzy = "*"
 python-Levenshtein = "*"
 

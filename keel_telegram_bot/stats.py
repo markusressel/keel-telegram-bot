@@ -16,6 +16,9 @@ APPROVAL_WATCHER_TIME = WATCHER_TIME.labels(type="approval")
 NEW_PENDING_APPROVAL_COUNTER = Counter('keel_new_pending_approval',
                                        'Counts new pending approvals recognized by this bot')
 
+REST_TIME = Summary('rest_endpoint_processing_seconds', 'Time spent in a rest command handler', ['endpoint'])
+REST_TIME_WEBHOOK = REST_TIME.labels(endpoint=ENDPOINT_WEBHOOK)
+
 KEEL_NOTIFICATION_COUNTER = Counter('keel_notifications', 'Counts notifications received from keel')
 KEEL_APPROVAL_ACTION_COUNTER = Counter('keel_approval_action_counter',
                                        'Counts approval notificaion actions', ['action', 'identifier'])

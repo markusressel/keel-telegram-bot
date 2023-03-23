@@ -1,7 +1,7 @@
 import logging
 from typing import List, Any
 
-from telegram import Update, ParseMode, ReplyKeyboardRemove, ReplyKeyboardMarkup, KeyboardButton
+from telegram import Update, ReplyKeyboardRemove, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import CallbackContext
 
 from keel_telegram_bot.const import CANCEL_KEYBOARD_COMMAND
@@ -18,7 +18,7 @@ class ReplyKeyboardHandler:
     def __init__(self):
         pass
 
-    def on_message(self, update: Update, context: CallbackContext):
+    async def on_message(self, update: Update, context: CallbackContext):
         user_id = update.effective_user.id
         text = update.effective_message.text
 
@@ -31,12 +31,12 @@ class ReplyKeyboardHandler:
 
         LOGGER.debug("Awaited response from user {} received: {}".format(user_id, text))
         try:
-            data["callback"](update, context, text, data["callback_data"])
+            await data["callback"](update, context, text, data["callback_data"])
             self.awaiting_response.pop(user_id)
         except Exception as e:
             LOGGER.exception(e)
 
-    def _on_user_selection(self, update: Update, context: CallbackContext, message: str, data: dict):
+    async def _on_user_selection(self, update: Update, context: CallbackContext, message: str, data: dict):
         """
         Called when a user selection is awaited and user message arrives
         :param update:
@@ -44,12 +44,12 @@ class ReplyKeyboardHandler:
         :param message:
         :param data:
         """
-        self.await_user_selection(update, context, message, data["choices"], data["key"],
-                                  data["callback"], data["callback_data"])
+        await self.await_user_selection(update, context, message, data["choices"], data["key"],
+                                        data["callback"], data["callback_data"])
 
-    def await_user_selection(self, update: Update, context: CallbackContext,
-                             selection: str or None, choices: List[Any], key: callable,
-                             callback: callable, callback_data: dict = None):
+    async def await_user_selection(self, update: Update, context: CallbackContext,
+                                   selection: str or None, choices: List[Any], key: callable,
+                                   callback: callable, callback_data: dict = None):
         """
         Sends a ReplyKeyboard to the user and waits for a valid selection.
         :param update: Update
@@ -71,7 +71,7 @@ class ReplyKeyboardHandler:
         perfect_matches = list(filter(lambda x: x[1] == 100, fuzzy_matches))
         if len(perfect_matches) == 1:
             choice = perfect_matches[0][0]
-            callback(update, context, choice, callback_data)
+            await callback(update, context, choice, callback_data)
             return
 
         # send reply keyboard with fuzzy matches to user
@@ -88,7 +88,7 @@ class ReplyKeyboardHandler:
                 "callback": callback,
                 "callback_data": callback_data,
             })
-        send_message(bot, chat_id, text, parse_mode=ParseMode.MARKDOWN, reply_to=message_id, menu=keyboard)
+        await send_message(bot, chat_id, text, parse_mode="MARKDOWN", reply_to=message_id, menu=keyboard)
 
     def await_response(self, user_id: str, options: List[str], callback_data: dict, callback):
         """
@@ -107,14 +107,14 @@ class ReplyKeyboardHandler:
             "callback_data": callback_data
         }
 
-    def cancel_keyboard_callback(self, update: Update, context: CallbackContext):
+    async def cancel_keyboard_callback(self, update: Update, context: CallbackContext):
         bot = context.bot
         chat_id = update.effective_chat.id
         user_id = update.effective_user.id
         message_id = update.effective_message.message_id
 
         text = "Cancelled"
-        send_message(bot, chat_id, text, reply_to=message_id, menu=ReplyKeyboardRemove(selective=True))
+        await send_message(bot, chat_id, text, reply_to=message_id, menu=ReplyKeyboardRemove(selective=True))
 
         if user_id in self.awaiting_response:
             self.awaiting_response.pop(user_id)

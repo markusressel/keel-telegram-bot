@@ -7,26 +7,31 @@ registries:
     password: "${{secrets.PYTHON_INDEX_PYPI_PYTHON_ORG_SIMPLE_PASSWORD}}"
 
 updates:
-- package-ecosystem: pip
-  insecure-external-code-execution: allow
-  directory: "/"
-  schedule:
-    interval: daily
-    time: "16:00"
-    timezone: Europe/Berlin
-  open-pull-requests-limit: 10
-  ignore:
-  - dependency-name: urllib3
-    versions:
-    - 1.26.4
-  - dependency-name: prometheus-client
-    versions:
-    - 0.10.0
-  - dependency-name: python-telegram-bot
-    versions:
-    - "13.2"
-  - dependency-name: emoji
-    versions:
-    - 1.2.0
-  registries:
-  - python-index-pypi-python-org-simple
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      # Check for updates to GitHub Actions every week
+      interval: "weekly"
+  - package-ecosystem: pip
+    insecure-external-code-execution: allow
+    directory: "/"
+    schedule:
+      interval: daily
+      time: "16:00"
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: urllib3
+        versions:
+          - 1.26.4
+      - dependency-name: prometheus-client
+        versions:
+          - 0.10.0
+      - dependency-name: python-telegram-bot
+        versions:
+          - "13.2"
+      - dependency-name: emoji
+        versions:
+          - 1.2.0
+    registries:
+      - python-index-pypi-python-org-simple

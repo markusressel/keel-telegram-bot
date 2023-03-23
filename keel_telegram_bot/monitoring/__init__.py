@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import threading
 
@@ -13,13 +14,16 @@ class RegularIntervalWorker:
         self._interval = interval
         self._timer = None
 
-    def start(self):
+    async def start(self):
         """
         Starts the worker
         """
         if self._timer is None:
             LOGGER.debug(f"Starting worker: {self.__class__.__name__}")
             self._schedule_next_run(0)
+
+            # wait forever
+            return await asyncio.Event().wait()
         else:
             LOGGER.debug("Already running, ignoring start() call")
 
@@ -46,13 +50,14 @@ class RegularIntervalWorker:
         The regularly executed task. Override this method.
         """
         try:
-            self._run()
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(self._run())
         except Exception as e:
             LOGGER.error(e, exc_info=True)
         finally:
             self._schedule_next_run()
 
-    def _run(self):
+    async def _run(self):
         """
         The regularly executed task. Override this method.
         """

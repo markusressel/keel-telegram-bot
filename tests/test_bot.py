@@ -1,9 +1,8 @@
-import unittest
-
 from keel_telegram_bot import util
+from tests import TestBase
 
 
-class BotTest(unittest.TestCase):
+class BotTest(TestBase):
 
     def test_is_filtered_for_real(self):
         chat_id = "123456789"

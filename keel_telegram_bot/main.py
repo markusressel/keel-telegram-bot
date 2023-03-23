@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sys
@@ -26,6 +27,9 @@ def main():
 
     LOGGER.debug("Config:\n{}".format(config.print(TomlFormatter())))
 
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
     # start prometheus server
     if config.STATS_ENABLED.value:
         start_http_server(config.STATS_PORT.value)
@@ -39,16 +43,20 @@ def main():
     )
 
     bot = KeelTelegramBot(config, api_client)
-    bot.start()
-
     monitor = Monitor(config, api_client, bot)
-    monitor.start()
-
     server = WebsocketServer(config, bot)
-    server.run()
 
-    monitor.stop()
-    bot.stop()
+    tasks = asyncio.gather(
+        bot.start(),
+        monitor.start(),
+        server.start(),
+    )
+
+    loop.run_until_complete(tasks)
+    loop.run_forever()
+
+    # monitor.stop()
+    # bot.stop()
 
 
 if __name__ == '__main__':

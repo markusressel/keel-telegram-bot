@@ -22,6 +22,10 @@ BUTTON_DATA_NOTHING = "_"
 BUTTON_DATA_APPROVE = "a"
 BUTTON_DATA_REJECT = "r"
 
+# webserver
+
+ENDPOINT_WEBHOOK = "/"
+
 # api keys
 KEY_ARCHIVED = "archived"
 KEY_REJECTED = "rejected"
