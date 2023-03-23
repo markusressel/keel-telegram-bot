@@ -1,24 +1,41 @@
 keel-telegram-bot:
+  # Determines the log level of the application, one of: debug, info, warning, error, fatal, panic
   log_level: warning
+  # Keel specific configuration options
   keel:
+    # Hostname of the Keel instance
     host: localhost
+    # Port of the Keel instance
     port: 9300
+    # Whether to use TLS when communicating with Keel
     ssl: true
+    # Username to use when authenticating with Keel
     username: myuser
+    # Password to use when authenticating with Keel
     password: mypassword
+  # Approval Monitor specific configuration options
   monitor:
+    # Interval to check for pending approvals
     interval: 10s
+  # Telegram specific configuration options
   telegram:
+    # List of Telegram usernames that are allowed to approve updates
     admin_usernames:
       - myadminuser
       - myotheradminuser
+    # Telegram bot token
     bot_token: 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
+    # List of Telegram chat IDs to send notifications to
     chat_ids:
       - 12345678
       - 87654321
+    # List of filters to apply before sending notifications and responding to bot commands
     filters:
       - chat_id: 12345678
         identifier: ".*something.*"
+  # Prometheus exporter specific configuration options
   stats:
+    # Whether to enable the Prometheus exporter
     enabled: true
+    # Port to provide Prometheus metrics on
     port: 8000
