@@ -1,6 +1,7 @@
 keel-telegram-bot:
   # Determines the log level of the application, one of: debug, info, warning, error, fatal, panic
   log_level: warning
+
   # Keel specific configuration options
   keel:
     # Hostname of the Keel instance
@@ -13,10 +14,12 @@ keel-telegram-bot:
     username: myuser
     # Password to use when authenticating with Keel
     password: mypassword
+
   # Approval Monitor specific configuration options
   monitor:
     # Interval to check for pending approvals
     interval: 10s
+
   # Telegram specific configuration options
   telegram:
     # List of Telegram usernames that are allowed to approve updates
@@ -33,6 +36,7 @@ keel-telegram-bot:
     filters:
       - chat_id: 12345678
         identifier: ".*something.*"
+
   # Prometheus exporter specific configuration options
   stats:
     # Whether to enable the Prometheus exporter
