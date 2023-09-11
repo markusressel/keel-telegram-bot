@@ -9,7 +9,7 @@ jobs:
   dockerhub:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # this writes the tag name into GIT_TAG_NAME
       - name: Get tag name
         uses: olegtarasov/get-tag@v2.1.2
@@ -23,7 +23,7 @@ jobs:
   ghcr:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Log into ghcr.io
         if: github.event_name != 'pull_request'
