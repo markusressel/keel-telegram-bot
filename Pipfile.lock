@@ -140,11 +140,11 @@
         },
         "blinker": {
             "hashes": [
-                "sha256:152090d27c1c5c722ee7e48504b02d76502811ce02e1523553b4cf8c8b3d3a8d",
-                "sha256:296320d6c28b006eb5e32d4712202dbcdcbf5dc482da298c2f44881c43884aaa"
+                "sha256:c3f865d4d54db7abc53758a01601cf343fe55b84c1de4e3fa910e420b438d5b9",
+                "sha256:e6820ff6fa4e4d1d8e2747c2283749c3f547e4fee112b98555cdcdae32996182"
             ],
-            "markers": "python_version >= '3.7'",
-            "version": "==1.6.3"
+            "markers": "python_version >= '3.8'",
+            "version": "==1.7.0"
         },
         "certifi": {
             "hashes": [
@@ -288,11 +288,12 @@
                 "async"
             ],
             "hashes": [
-                "sha256:09c347a92aa7ff4a8e7f3206795f30d826654baf38b873d0744cd571ca609efc",
-                "sha256:f69fcd559dc907ed196ab9df0e48471709175e696d6e698dd4dbe940f96ce66b"
+                "sha256:6489f51bb3666def6f314e15f19d50a1869a19ae0e8c9a3641ffe66c77d42403",
+                "sha256:ca631a507f6dfe6c278ae20112cea3ff54ff2216390bf8880f6b035a5354af13"
             ],
+            "index": "pypi",
             "markers": "python_version >= '3.8'",
-            "version": "==2.3.3"
+            "version": "==3.0.1"
         },
         "frozenlist": {
             "hashes": [
@@ -403,11 +404,11 @@
         },
         "importlib-metadata": {
             "hashes": [
-                "sha256:3ebb78df84a805d7698245025b975d9d67053cd94c79245ba4b3eb694abe68bb",
-                "sha256:dbace7892d8c0c4ac1ad096662232f831d4e64f4c4545bd53016a3e9d4654743"
+                "sha256:4805911c3a4ec7c3966410053e9ec6a1fecd629117df5adee56dfc9432a1081e",
+                "sha256:f238736bb06590ae52ac1fab06a3a9ef1d8dce2b7a35b5ab329371d6c8f5d2cc"
             ],
             "markers": "python_version < '3.10'",
-            "version": "==6.8.0"
+            "version": "==7.0.1"
         },
         "iso8601": {
             "hashes": [
@@ -431,7 +432,6 @@
                 "sha256:7d6d50dd97d52cbc355597bd845fabfbac3f551e1f99619e39a35ce8c370b5fa",
                 "sha256:ac8bd6544d4bb2c9792bf3a159e80bba8fda7f07e81bc3aed565432d5925ba90"
             ],
-            "index": "pypi",
             "markers": "python_version >= '3.7'",
             "version": "==3.1.3"
         },
