@@ -1,0 +1,57 @@
+[tool.poetry]
+name = "keel-telegram-bot"
+version = "1.3.2"
+
+description = "A telegram bot for keel.sh"
+
+license = "AGPL-3.0-or-later"
+
+authors = [
+    "Markus Ressel <mail@markusressel.de>",
+]
+
+readme = 'README.md'
+
+repository = "https://github.com/markusressel/keel-telegram-bot"
+homepage = "https://github.com/markusressel/keel-telegram-bot"
+
+keywords = ['keel.sh', 'keel', 'telegram', 'telegram-bot']
+
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Development Status :: 5 - Production/Stable"
+]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dependencies]
+python = "^3.11"  # Compatible python versions must be declared here
+
+iso8601 = "*"
+requests = "*"
+aiohttp = "*"
+flask = { extras = ["async"], version = ">=1.1.1" }
+container-app-conf = ">=5.0.0"
+python-telegram-bot = ">=20"
+telegram-click = ">=6.0.1"
+emoji = "*"
+prometheus-client = "*"
+prometheus_async = "*"
+fuzzywuzzy = "*"
+python-Levenshtein = "*"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+
+[tool.poetry.scripts]
+keel-telegram-bot = 'keel_telegram_bot.main:main'
