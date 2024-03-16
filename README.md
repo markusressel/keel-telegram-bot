@@ -17,48 +17,7 @@
 * [x] Permission handling based on telegram usernames
 * [x] Filter visible approvals on a per-chat basis
 
-# How to use
-
-## Manual installation
-
-### Install
-
-Install **keel-telegram-bot** using pip:
-
-```shell
-pip3 install keel-telegram-bot
-```
-
-### Configuration
-
-**keel-telegram-bot** uses [container-app-conf](https://github.com/markusressel/container-app-conf)
-to provide configuration via a YAML file as well as ENV variables. Have a look at the 
-[documentation about it](https://github.com/markusressel/container-app-conf).
-
-See [keel-telegram-bot_example.yaml](/keel-telegram-bot_example.yaml) for an example in this repo.
-
-### Run
-
-Start the bot by using:
-
-```shell script
-keel-telegram-bot
-```
-
-## Docker
-
-To run **keel-telegram-bot** using docker you can use the [markusressel/keel-telegram-bot](https://hub.docker.com/r/markusressel/keel-telegram-bot) 
-image from DockerHub:
-
-```
-sudo docker run -t \
-    markusressel/keel-telegram-bot:latest
-```
-
-Configure the image using either environment variables, or mount the configuration
-file from your host system to `/app/keel-telegram-bot.yaml`.
-
-## Setup
+# How it works
 
 This bot uses the REST api provided by Keel to interact with it
 and relies on the Webhook functionality to receive and forward notifications
@@ -73,6 +32,28 @@ To get notifications working you will have to provide the address of
 **keel-telegram-bot** to Keel using the `WEBHOOK_ENDPOINT` env variable.
 The simplest way to achieve this is by running both Keel and **keel-telegram-bot**
 on the same host and specifying `http://localhost:5000/`.
+
+# How to use
+
+Configure the docker image using either environment variables, or mount the configuration
+file from your host system to `/app/keel-telegram-bot.yaml`.
+
+## Configuration
+
+**keel-telegram-bot** uses [container-app-conf](https://github.com/markusressel/container-app-conf)
+to provide configuration via a YAML file as well as ENV variables. Have a look at the 
+[documentation about it](https://github.com/markusressel/container-app-conf).
+
+See [keel-telegram-bot_example.yaml](/keel-telegram-bot_example.yaml) for an example in this repo.
+
+## Run
+
+To run **keel-telegram-bot** using docker you can use the [ghcr.io/markusressel/keel-telegram-bot](https://github.com/markusressel/keel-telegram-bot/pkgs/container/keel-telegram-bot) image:
+
+```
+sudo docker run -t \
+    ghcr.io/markusressel/keel-telegram-bot:latest
+```
 
 # Contributing
 
