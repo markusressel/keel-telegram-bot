@@ -3,11 +3,11 @@ name: Docker Image
 on:
   push:
     branches:
-      - main
+      - master
     tags:
       - "*.*.*"
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 env:
   REGISTRY: ghcr.io
