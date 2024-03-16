@@ -8,6 +8,8 @@ on:
 jobs:
   dockerhub:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_RELEASE: true
     steps:
       - uses: actions/checkout@v4
       # this writes the tag name into GIT_TAG_NAME
@@ -22,6 +24,8 @@ jobs:
 
   ghcr:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_RELEASE: true
     steps:
       - uses: actions/checkout@v4
       - name: Get tag name
