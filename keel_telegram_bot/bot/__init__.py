@@ -126,6 +126,56 @@ class KeelTelegramBot:
         await send_message(bot, chat_id,
                            f"Welcome {user_first_name},\nthis is your keel-telegram-bot instance, ready to go!")
 
+    @COMMAND_TIME_LIST_RESOURCES.time()
+    @command(name=COMMAND_LIST_RESOURCES,
+             description="List all resources.",
+             arguments=[
+                 Argument(name=["glob", "f"], description="Filter entries using the given text",
+                          example="	deployment/myimage", optional=True),
+                 Flag(name=["tracked", "t"], description="Only list tracked resources"),
+             ],
+             permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
+    async def _list_resources_callback(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE,
+        glob: str or None
+    ) -> None:
+        """
+        Lists all available resources
+        :param update: the chat update object
+        :param context: telegram context
+        :param glob: (optional) filter glob
+        """
+        bot = context.bot
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+
+        """
+        	Provider    string            `json:"provider"`
+            Identifier  string            `json:"identifier"`
+            Name        string            `json:"name"`
+            Namespace   string            `json:"namespace"`
+            Kind        string            `json:"kind"`
+            Policy      string            `json:"policy"`
+            Images      []string          `json:"images"`
+            Labels      map[string]string `json:"labels"`
+            Annotations map[string]string `json:"annotations"`
+            Status      k8s.Status        `json:"status"`
+        """
+
+        def filter_resources_by(resources: List[dict], glob: str) -> List[dict]:
+            return list(filter(
+                lambda x: re.search(glob, x["name"]) or re.search(glob, x["namespace"]) or re.search(glob, x[
+                    "policy"]) or any(list(map(lambda y: re.search(glob, y), x["images"]))), resources))
+
+        items = self._api_client.get_resources()
+        filtered_items = list(filter(lambda x: filter_resources_by(items, glob), items))
+
+        formatted_message = "\n".join(
+            list(map(lambda x: f"> {x['namespace']}/{x['name']} {x['policy']} {x['name']}", filtered_items))
+        )
+
+        await send_message(bot, chat_id, formatted_message, reply_to=message.message_id, parse_mode="HTML")
+
     @COMMAND_TIME_LIST_APPROVALS.time()
     @command(name=COMMAND_LIST_APPROVALS,
              description="List pending approvals",

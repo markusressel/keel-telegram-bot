@@ -25,6 +25,12 @@ class KeelApiClient:
 
         self._base_url = f"{'https' if ssl else 'http'}://{host}:{port}"
 
+    def get_resources(self) -> List[dict]:
+        """
+        Returns a list of all resources
+        """
+        return self._do_request(GET, self._base_url + "/v1/resources")
+
     def get_approvals(self, rejected: bool = None, archived: bool = None) -> List[dict]:
         """
         :param rejected: True for rejected, False for approved, None for all
