@@ -21,11 +21,11 @@
 
 This bot uses the REST api provided by Keel to interact with it
 and relies on the Webhook functionality to receive and forward notifications
-to telegram chats. On one hand **keel-telegram-bot** acts like the web 
-interface, on the other hand it acts like a proxy, both combined into a 
+to telegram chats. On one hand **keel-telegram-bot** acts like the web
+interface of keel, on the other hand it acts like a relay for keel notifications, both combined into a
 single package.
 
-To get the commands working simply provide all the necessary details of
+To get telegram commands working simply provide all the necessary details of
 the configuration file.
 
 To get notifications working you will have to provide the address of 

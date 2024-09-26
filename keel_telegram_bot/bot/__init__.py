@@ -325,7 +325,11 @@ class KeelTelegramBot:
         """
         KEEL_NOTIFICATION_COUNTER.inc()
 
-        identifier = data.get("identifier", None)
+        identifier: str = data.get("identifier", "")
+        if identifier == "":
+            LOGGER.error("Received notification without identifier")
+            return
+
         title = data.get("name", None)
         type = data.get("type", None)
         level = data.get("level", None)  # success/failure
