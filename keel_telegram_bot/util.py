@@ -62,7 +62,7 @@ async def send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = N
     """
     from emoji import emojize
 
-    emojized_text = emojize(message)
+    emojized_text = emojize(message, language='alias')
     return await bot.send_message(
         chat_id=chat_id, parse_mode=parse_mode, text=emojized_text,
         reply_to_message_id=reply_to,
