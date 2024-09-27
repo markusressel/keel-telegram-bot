@@ -25,3 +25,10 @@ class DailyStats:
             approvals_rejected=data["approvalsRejected"],
             updates=data["updates"],
         )
+
+    def __str__(self):
+        return f"Daily stats for {self.timestamp}:\n" \
+               f"Webhooks received: {self.webhooks_received}\n" \
+               f"Approvals approved: {self.approvals_approved}\n" \
+               f"Approvals rejected: {self.approvals_rejected}\n" \
+               f"Updates: {self.updates}"

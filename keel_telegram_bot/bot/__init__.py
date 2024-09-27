@@ -64,6 +64,9 @@ class KeelTelegramBot:
                 CommandHandler(COMMAND_DELETE,
                                filters=(~ filters.REPLY) & (~ filters.FORWARDED),
                                callback=self._delete_callback),
+                CommandHandler(COMMAND_STATS,
+                               filters=(~ filters.REPLY) & (~ filters.FORWARDED),
+                               callback=self._stats_callback),
                 CommandHandler(COMMAND_CHATID,
                                filters=(~ filters.REPLY) & (~ filters.FORWARDED),
                                callback=self._chatid_callback),
@@ -372,6 +375,22 @@ class KeelTelegramBot:
             update, context, identifier, choices=items, key=lambda x: x.identifier,
             callback=execute,
         )
+
+    @COMMAND_TIME_STATS.time()
+    @command(
+        name=COMMAND_STATS,
+        description="Print keel statistics.",
+        permissions=CONFIG_ADMINS,
+    )
+    async def _stats_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        bot = context.bot
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+
+        stats = self._api_client.get_stats()
+
+        text = f"{stats}"
+        await send_message(bot, chat_id, text, reply_to=message.message_id)
 
     async def on_notification(self, data: dict):
         """
