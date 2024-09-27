@@ -192,8 +192,8 @@ def resource_to_str(r: Resource) -> str:
         [header_line]
         + policy_lines
         + image_lines
-        + label_lines
         + annotation_lines
+        + label_lines
     )
 
 
