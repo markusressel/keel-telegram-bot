@@ -179,7 +179,7 @@ class KeelTelegramBot:
         items = self._api_client.get_resources()
         filtered_items = filter_resources_by(items, glob, tracked)
 
-        formatted_message = "\n".join(
+        formatted_message = "\n\n".join(
             list(map(lambda x: resource_to_str(x), filtered_items))
         )
 
@@ -221,7 +221,7 @@ class KeelTelegramBot:
         items = self._api_client.get_tracked()
         filtered_items = filter_tracked_images_by(items, glob)
 
-        formatted_message = "\n".join(
+        formatted_message = "\n\n".join(
             list(map(lambda x: tracked_image_to_str(x), filtered_items))
         )
 
