@@ -165,14 +165,22 @@ def resource_to_str(r: Resource) -> str:
     identifier_lines = ["  Identifier: " + r.identifier]
     policy_lines = ["  Policy: " + r.policy.value]
 
+    image_lines = []
     if len(r.images) > 1:
         image_lines = list(map(lambda x: f"    {x}", r.images))
         image_lines = ["  Images:"] + image_lines
-    else:
+    elif len(r.images) == 1:
         image_lines = ["  Image: " + r.images[0]]
 
-    label_lines = list(map(lambda x: f"    {x}: {r.labels[x]}", r.labels))
-    label_lines = ["  Labels:"] + label_lines
+    label_lines = []
+    if len(r.labels) > 0:
+        label_lines = list(map(lambda x: f"    {x}: {r.labels[x]}", r.labels))
+        label_lines = ["  Labels:"] + label_lines
+
+    annotation_lines = []
+    if len(r.annotations) > 0:
+        annotation_lines = list(map(lambda x: f"    {x}: {r.annotations[x]}", r.annotations))
+        annotation_lines = ["  Annotations:"] + annotation_lines
 
     return "\n".join(
         [f"> {r.namespace}/{r.name}"]
@@ -180,6 +188,7 @@ def resource_to_str(r: Resource) -> str:
         + policy_lines
         + image_lines
         + label_lines
+        + annotation_lines
     )
 
 
