@@ -159,9 +159,8 @@ def approval_to_str(data: Approval) -> str:
 def resource_to_str(r: Resource) -> str:
     image_lines = list(map(lambda x: f"    {x}", r.images))
     return "\n".join(
-        list(f"> {r.namespace}/{r.name} P: {r.policy.value}") + image_lines
+        [f"> {r.namespace}/{r.name} P: {r.policy.value}"] + image_lines
     )
-
 
 
 def deadline_diff_to_str(deadline_diff) -> str:

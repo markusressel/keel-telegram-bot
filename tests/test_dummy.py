@@ -1,5 +1,6 @@
 from keel_telegram_bot.client.approval import Approval
-from keel_telegram_bot.util import approval_to_str
+from keel_telegram_bot.client.resource import Resource
+from keel_telegram_bot.util import approval_to_str, resource_to_str
 from tests import TestBase
 
 
@@ -31,4 +32,35 @@ class DummyTest(TestBase):
         })
 
         result = approval_to_str(approval)
+        print(result)
+
+    def test_resource_format(self):
+        resource = Resource.from_dict({
+            "provider": "kubernetes",
+            "identifier": "deployment/local-path-storage/local-path-provisioner:v0.0.19",
+            "name": "local-path-provisioner",
+            "namespace": "local-path-storage",
+            "kind": "deployment",
+            "policy": "semver",
+            "images": [
+                "codeberg.org/forgejo/forgejo:1.21.11-0",
+                "library/memcached:1.6.31"
+            ],
+            "labels": {
+                "keel.sh/approvals": 1,
+                "keel.sh/policy": "major",
+                "keel.sh/pollSchedule": "@every 24h",
+                "keel.sh/trigger": "poll",
+            },
+            "annotations": {},
+            "status": {
+                "replicas": 1,
+                "updatedReplicas": 1,
+                "readyReplicas": 1,
+                "availableReplicas": 1,
+                "unavailableReplicas": 0,
+            }
+        })
+
+        result = resource_to_str(resource)
         print(result)
