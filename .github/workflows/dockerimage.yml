@@ -14,7 +14,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  dockerhub:
+  ghcr:
     runs-on: ubuntu-latest
 
     strategy:
