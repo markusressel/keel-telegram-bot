@@ -1,34 +1,43 @@
 from dataclasses import dataclass
+from datetime import datetime
+from typing import List
 
 
 @dataclass
-class DailyStats:
-    """
-    Timestamp         int `json:"timestamp"`
-	WebhooksReceived  int `json:"webhooksReceived"`
-	ApprovalsApproved int `json:"approvalsApproved"`
-	ApprovalsRejected int `json:"approvalsRejected"`
-	Updates           int `json:"updates"`
-    """
-    timestamp: int
-    webhooks_received: int
-    approvals_approved: int
-    approvals_rejected: int
+class AuditLogStats:
+    date: datetime.date
+    webhooks: int
+    approved: int
+    rejected: int
     updates: int
 
     @staticmethod
     def from_dict(data: dict):
-        return DailyStats(
-            timestamp=data["timestamp"],
-            webhooks_received=data["webhooksReceived"],
-            approvals_approved=data["approvalsApproved"],
-            approvals_rejected=data["approvalsRejected"],
+        return AuditLogStats(
+            date=datetime.fromisoformat(data["date"]),
+            webhooks=data["webhooks"],
+            approved=data["approved"],
+            rejected=data["rejected"],
             updates=data["updates"],
         )
 
     def __str__(self):
-        return f"Daily stats for {self.timestamp}:\n" \
-               f"Webhooks received: {self.webhooks_received}\n" \
-               f"Approvals approved: {self.approvals_approved}\n" \
-               f"Approvals rejected: {self.approvals_rejected}\n" \
+        return f"Audit log stats for {self.date}:\n" \
+               f"Webhooks: {self.webhooks}\n" \
+               f"Approved: {self.approved}\n" \
+               f"Rejected: {self.rejected}\n" \
                f"Updates: {self.updates}"
+
+
+@dataclass
+class DailyStats:
+    stats: List[AuditLogStats]
+
+    @staticmethod
+    def from_dict(data: List[dict]):
+        return DailyStats(
+            stats=[AuditLogStats.from_dict(stats) for stats in data]
+        )
+
+    def __str__(self):
+        return "\n".join([str(stats) for stats in self.stats])
