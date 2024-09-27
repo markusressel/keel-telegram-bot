@@ -140,7 +140,8 @@ class KeelTelegramBot:
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _list_resources_callback(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE,
-        glob: str or None
+        glob: str or None,
+        tracked: bool,
     ) -> None:
         """
         Lists all available resources
@@ -165,13 +166,20 @@ class KeelTelegramBot:
             Status      k8s.Status        `json:"status"`
         """
 
-        def filter_resources_by(resources: List[dict], glob: str) -> List[dict]:
-            return list(filter(
-                lambda x: re.search(glob, x["name"]) or re.search(glob, x["namespace"]) or re.search(glob, x[
-                    "policy"]) or any(list(map(lambda y: re.search(glob, y), x["images"]))), resources))
+        def filter_resources_by(resources: List[dict], glob: str or None, tracked: bool) -> List[dict]:
+            result = resources
+            if glob is not None:
+                result = list(filter(
+                    lambda x: re.search(glob, x["name"]) or re.search(glob, x["namespace"]) or re.search(glob, x[
+                        "policy"]) or any(list(map(lambda y: re.search(glob, y), x["images"]))), resources))
+
+            if tracked:
+                result = list(filter(lambda x: x["policy"] != "none", result))
+
+            return result
 
         items = self._api_client.get_resources()
-        filtered_items = list(filter(lambda x: filter_resources_by(items, glob), items))
+        filtered_items = list(filter(lambda x: filter_resources_by(items, glob, tracked), items))
 
         formatted_message = "\n".join(
             list(map(lambda x: f"> {x['namespace']}/{x['name']} {x['policy']} {x['name']}", filtered_items))
