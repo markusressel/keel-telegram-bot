@@ -18,7 +18,7 @@ from keel_telegram_bot.client.api_client import KeelApiClient
 from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.client.resource import Resource
 from keel_telegram_bot.client.tracked_image import TrackedImage
-from keel_telegram_bot.client.types import SemverPolicyType
+from keel_telegram_bot.client.types import SemverPolicyType, Provider
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.stats import *
 from keel_telegram_bot.util import send_message, approval_to_str, resource_to_str, tracked_image_to_str
@@ -59,6 +59,9 @@ class KeelTelegramBot:
                 CommandHandler(COMMAND_LIST_APPROVALS,
                                filters=(~ filters.REPLY) & (~ filters.FORWARDED),
                                callback=self._list_approvals_callback),
+                CommandHandler(COMMAND_SET_APPROVAL_COUNT,
+                               filters=(~ filters.REPLY) & (~ filters.FORWARDED),
+                               callback=self._set_approval_count_callback),
                 CommandHandler(COMMAND_APPROVE,
                                filters=(~ filters.REPLY) & (~ filters.FORWARDED),
                                callback=self._approve_callback),
@@ -286,6 +289,38 @@ class KeelTelegramBot:
 
         text = "\n\n".join(lines).strip()
         await send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode="HTML")
+
+    @COMMAND_TIME_SET_APPROVAL_COUNT.time()
+    @command(name=COMMAND_SET_APPROVAL_COUNT,
+             description="Set the approval count for a resource",
+             arguments=[
+                 Argument(name=["identifier", "i"], description="Resource identifier",
+                          example="daemonset/docker-proxy/docker-proxy"),
+                 Argument(name=["count", "c"], description="Approval count", example="2", type=int),
+             ],
+             permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
+    async def _set_approval_count_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
+                                           identifier: str, count: int) -> None:
+        """
+        Set the required approval count for a resource
+        """
+        bot = context.bot
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+
+        self._api_client.get_resources()
+
+        self._api_client.set_required_approvals_count(
+            identifier=identifier,
+            provider=Provider.Kubernetes,
+            votes_required=count
+        )
+
+        resource = self._api_client.get_resource(identifier=identifier)
+        resource_lines = resource_to_str(resource)
+        text = resource_lines
+
+        await send_message(bot, chat_id, text, reply_to=message.message_id)
 
     @COMMAND_TIME_APPROVE.time()
     @command(name=COMMAND_APPROVE,

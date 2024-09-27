@@ -39,6 +39,16 @@ class KeelApiClient:
         result = [Resource.from_dict(resource) for resource in response]
         return result
 
+    def get_resource(self, identifier: str) -> Resource or None:
+        """
+        Returns a resource by identifier
+        """
+        resources = self.get_resources()
+        for resource in resources:
+            if resource.identifier == identifier:
+                return resource
+        return None
+
     def get_tracked(self) -> List[TrackedImage]:
         """
         Returns a list of all tracked images
