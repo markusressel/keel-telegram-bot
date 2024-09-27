@@ -1,7 +1,7 @@
 import logging
 
-from keel_telegram_bot.api_client import KeelApiClient
 from keel_telegram_bot.bot import KeelTelegramBot
+from keel_telegram_bot.client.api_client import KeelApiClient
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.monitoring import RegularIntervalWorker
 from keel_telegram_bot.stats import APPROVAL_WATCHER_TIME, NEW_PENDING_APPROVAL_COUNTER
@@ -37,7 +37,7 @@ class Monitor(RegularIntervalWorker):
             self._old = active
             return
 
-        new_pending = filter_new_by_key(self._old, active, key=lambda x: x["id"])
+        new_pending = filter_new_by_key(self._old, active, key=lambda x: x.id)
         self._old = active
 
         for item in new_pending:

@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import Mock
 
-from keel_telegram_bot.api_client import KeelApiClient
 from keel_telegram_bot.bot import KeelTelegramBot
+from keel_telegram_bot.client.api_client import KeelApiClient
 from keel_telegram_bot.monitoring.monitor import Monitor
 from tests import TestBase
 

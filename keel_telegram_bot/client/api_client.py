@@ -1,10 +1,13 @@
-import enum
 import logging
 from typing import List
 
 import requests
 from requests.auth import HTTPBasicAuth
 
+from keel_telegram_bot.client.approval import Approval
+from keel_telegram_bot.client.daily_stats import DailyStats
+from keel_telegram_bot.client.resource import Resource
+from keel_telegram_bot.client.types import Action, Provider, Trigger
 from keel_telegram_bot.const import REQUESTS_TIMEOUT
 
 LOGGER = logging.getLogger(__name__)
@@ -12,32 +15,6 @@ LOGGER = logging.getLogger(__name__)
 GET = "get"
 POST = "post"
 PUT = "put"
-
-
-class Action(enum.Enum):
-    """
-    Enum for action types
-    """
-    Approve = "approve"
-    Reject = "reject"
-    Delete = "delete"
-    Archive = "archive"
-
-
-class Provider(enum.Enum):
-    """
-    Enum for provider types
-    """
-    Kubernetes = "kubernetes"
-    Helm = "helm"
-
-
-class Trigger(enum.Enum):
-    """
-    Enum for trigger types
-    """
-    Default = "default"
-    Poll = "poll"
 
 
 class KeelApiClient:
@@ -53,11 +30,13 @@ class KeelApiClient:
 
         self._base_url = f"{'https' if ssl else 'http'}://{host}:{port}"
 
-    def get_resources(self) -> List[dict]:
+    def get_resources(self) -> List[Resource]:
         """
         Returns a list of all resources
         """
-        return self._do_request(GET, self._base_url + "/v1/resources")
+        response = self._do_request(GET, self._base_url + "/v1/resources")
+        result = [Resource.from_dict(resource) for resource in response]
+        return result
 
     def get_tracked(self) -> List[dict]:
         """
@@ -95,20 +74,21 @@ class KeelApiClient:
             "votesRequired": votes_required,
         })
 
-    def get_approvals(self, rejected: bool = None, archived: bool = None) -> List[dict]:
+    def get_approvals(self, rejected: bool = None, archived: bool = None) -> List[Approval]:
         """
         :param rejected: True for rejected, False for approved, None for all
         :param archived: True for archived, False for not archived, None for all
         :return: a list of all approvals matching criteria
         """
         response = self._do_request(GET, self._base_url + "/v1/approvals")
+        result = [Approval.from_dict(approval) for approval in response]
 
         if rejected is not None:
-            response = list(filter(lambda x: x["rejected"] == rejected, response))
+            result = list(filter(lambda x: x.rejected == rejected, result))
         if archived is not None:
-            response = list(filter(lambda x: x["archived"] == archived, response))
+            result = list(filter(lambda x: x.archived == archived, result))
 
-        return response
+        return result
 
     def approve(self, id: str, identifier: str, voter: str) -> None:
         """
@@ -151,6 +131,13 @@ class KeelApiClient:
             "voter": voter,
             "action": action.value,
         })
+
+    def get_stats(self) -> DailyStats:
+        """
+        Returns the stats
+        """
+        result = self._do_request(GET, self._base_url + "/v1/stats")
+        return DailyStats.from_dict(result)
 
     def _do_request(self, method: str = GET, url: str = "/", params: dict = None,
                     json: dict = None) -> list or dict or None:

@@ -12,9 +12,12 @@ from telegram_click.argument import Argument, Flag
 from telegram_click.decorator import command
 
 from keel_telegram_bot import util
-from keel_telegram_bot.api_client import KeelApiClient
 from keel_telegram_bot.bot.permissions import CONFIG_ADMINS, CONFIGURED_CHAT_ID
 from keel_telegram_bot.bot.reply_keyboard_handler import ReplyKeyboardHandler
+from keel_telegram_bot.client.api_client import KeelApiClient
+from keel_telegram_bot.client.approval import Approval
+from keel_telegram_bot.client.resource import Resource
+from keel_telegram_bot.client.types import SemverPolicyType
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.stats import *
 from keel_telegram_bot.util import send_message, approval_to_str
@@ -153,28 +156,16 @@ class KeelTelegramBot:
         message = update.effective_message
         chat_id = update.effective_chat.id
 
-        """
-        	Provider    string            `json:"provider"`
-            Identifier  string            `json:"identifier"`
-            Name        string            `json:"name"`
-            Namespace   string            `json:"namespace"`
-            Kind        string            `json:"kind"`
-            Policy      string            `json:"policy"`
-            Images      []string          `json:"images"`
-            Labels      map[string]string `json:"labels"`
-            Annotations map[string]string `json:"annotations"`
-            Status      k8s.Status        `json:"status"`
-        """
-
-        def filter_resources_by(resources: List[dict], glob: str or None, tracked: bool) -> List[dict]:
+        def filter_resources_by(resources: List[Resource], glob: str or None, tracked: bool) -> List[Resource]:
             result = resources
             if glob is not None:
                 result = list(filter(
-                    lambda x: re.search(glob, x["name"]) or re.search(glob, x["namespace"]) or re.search(glob, x[
-                        "policy"]) or any(list(map(lambda y: re.search(glob, y), x["images"]))), resources))
+                    lambda x: re.search(glob, x.name) or re.search(glob, x.namespace) or re.search(glob,
+                                                                                                   x.policy.value) or any(
+                        list(map(lambda y: re.search(glob, y), x.images))), resources))
 
             if tracked:
-                result = list(filter(lambda x: x["policy"] != "none", result))
+                result = list(filter(lambda x: x.policy != SemverPolicyType.NNone, result))
 
             return result
 
@@ -182,7 +173,7 @@ class KeelTelegramBot:
         filtered_items = filter_resources_by(items, glob, tracked)
 
         formatted_message = "\n".join(
-            list(map(lambda x: f"> {x['namespace']}/{x['name']} {x['policy']} {x['name']}", filtered_items))
+            list(map(lambda x: f"> {x.namespace}/{x.name} {x.policy} {x.name}", filtered_items))
         )
 
         LOGGER.debug(
@@ -209,13 +200,13 @@ class KeelTelegramBot:
         chat_id = update.effective_chat.id
 
         items = self._api_client.get_approvals()
-        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x["identifier"]), items))
+        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x.identifier), items))
 
-        rejected_items = list(filter(lambda x: x[KEY_REJECTED], items))
-        archived_items = list(filter(lambda x: x[KEY_ARCHIVED], items))
+        rejected_items = list(filter(lambda x: x.rejected, items))
+        archived_items = list(filter(lambda x: x.archived, items))
         pending_items = list(filter(
             lambda x: x not in archived_items and x not in rejected_items
-                      and x[KEY_VOTES_RECEIVED] < x[KEY_VOTES_REQUIRED], items))
+                      and x.votesReceived < x.votesRequired, items))
         approved_items = list(
             filter(lambda x: x not in rejected_items and x not in archived_items and x not in pending_items, items))
 
@@ -269,28 +260,28 @@ class KeelTelegramBot:
         if voter is None:
             voter = update.effective_user.full_name
 
-        async def execute(update: Update, context: ContextTypes.DEFAULT_TYPE, item: dict, data: dict):
+        async def execute(update: Update, context: ContextTypes.DEFAULT_TYPE, item: Approval, data: dict):
             bot = context.bot
             message = update.effective_message
             chat_id = update.effective_chat.id
 
-            self._api_client.approve(item["id"], item["identifier"], voter)
-            text = f"Approved {item['identifier']}"
+            self._api_client.approve(item.id, item.identifier, voter)
+            text = f"Approved {item.identifier}"
             await send_message(bot, chat_id, text, reply_to=message.message_id,
                                menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
-        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x["identifier"]), items))
+        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x.identifier), items))
 
         # compare to the "id" first
-        exact_matches = list(filter(lambda x: x["id"] == identifier, items))
+        exact_matches = list(filter(lambda x: x.id == identifier, items))
         if len(exact_matches) > 0:
             await execute(update, context, exact_matches[0], {})
             return
 
         # then fuzzy match to "identifier"
         await self._response_handler.await_user_selection(
-            update, context, identifier, choices=items, key=lambda x: x["identifier"],
+            update, context, identifier, choices=items, key=lambda x: x.identifier,
             callback=execute,
         )
 
@@ -314,28 +305,28 @@ class KeelTelegramBot:
         if not voter:
             voter = update.effective_user.name
 
-        async def execute(update: Update, context: ContextTypes.DEFAULT_TYPE, item: dict, data: dict):
+        async def execute(update: Update, context: ContextTypes.DEFAULT_TYPE, item: Approval, data: dict):
             bot = context.bot
             message = update.effective_message
             chat_id = update.effective_chat.id
 
-            self._api_client.reject(item["id"], item["identifier"], voter)
-            text = f"Rejected {item['identifier']}"
+            self._api_client.reject(item.id, item.identifier, voter)
+            text = f"Rejected {item.identifier}"
             await send_message(bot, chat_id, text, reply_to=message.message_id,
                                menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals(rejected=False, archived=False)
-        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x["identifier"]), items))
+        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x.identifier), items))
 
         # compare to the "id" first
-        exact_matches = list(filter(lambda x: x["id"] == identifier, items))
+        exact_matches = list(filter(lambda x: x.id == identifier, items))
         if len(exact_matches) > 0:
             await execute(update, context, exact_matches[0], {})
             return
 
         # then fuzzy match to "identifier"
         await self._response_handler.await_user_selection(
-            update, context, identifier, choices=items, key=lambda x: x["identifier"],
+            update, context, identifier, choices=items, key=lambda x: x.identifier,
             callback=execute,
         )
 
@@ -357,28 +348,28 @@ class KeelTelegramBot:
         if voter is None:
             voter = update.effective_user.full_name
 
-        async def execute(update: Update, context: ContextTypes.DEFAULT_TYPE, item: dict, data: dict):
+        async def execute(update: Update, context: ContextTypes.DEFAULT_TYPE, item: Approval, data: dict):
             bot = context.bot
             message = update.effective_message
             chat_id = update.effective_chat.id
 
-            self._api_client.delete(item["id"], item["identifier"], voter)
-            text = f"Deleted {item['identifier']}"
+            self._api_client.delete(item.id, item.identifier, voter)
+            text = f"Deleted {item.identifier}"
             await send_message(bot, chat_id, text, reply_to=message.message_id,
                                menu=ReplyKeyboardRemove(selective=True))
 
         items = self._api_client.get_approvals()
-        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x["identifier"]), items))
+        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x.identifier), items))
 
         # compare to the "id" first
-        exact_matches = list(filter(lambda x: x["id"] == identifier, items))
+        exact_matches = list(filter(lambda x: x.id == identifier, items))
         if len(exact_matches) > 0:
             await execute(update, context, exact_matches[0], {})
             return
 
         # then fuzzy match to "identifier"
         await self._response_handler.await_user_selection(
-            update, context, identifier, choices=items, key=lambda x: x["identifier"],
+            update, context, identifier, choices=items, key=lambda x: x.identifier,
             callback=execute,
         )
 
@@ -417,13 +408,13 @@ class KeelTelegramBot:
                 menu=None
             )
 
-    async def on_new_pending_approval(self, item: dict):
+    async def on_new_pending_approval(self, item: Approval):
         """
         Handles new pending approvals by sending a message
         including an inline keyboard to all configured chat ids
         :param item: new pending approval
         """
-        identifier = item["identifier"]
+        identifier = item.identifier
         text = approval_to_str(item)
         menu = self.create_approval_notification_menu(item)
 
@@ -440,7 +431,7 @@ class KeelTelegramBot:
                     text, parse_mode="HTML",
                     menu=menu
                 )
-                self._register_message(response.chat_id, response.message_id, item["id"], item["identifier"])
+                self._register_message(response.chat_id, response.message_id, item.id, item.identifier)
             except Exception as ex:
                 LOGGER.exception(ex)
 
@@ -577,14 +568,14 @@ class KeelTelegramBot:
         keyboard = list(map(lambda x: InlineKeyboardButton(x[0], callback_data=x[1]), items.items()))
         return InlineKeyboardMarkup.from_column(keyboard)
 
-    def create_approval_notification_menu(self, item: dict) -> InlineKeyboardMarkup:
+    def create_approval_notification_menu(self, item: Approval) -> InlineKeyboardMarkup:
         keyboard_items = {}
-        if item["archived"]:
+        if item.archived:
             keyboard_items["Approved"] = BUTTON_DATA_NOTHING
-        elif item["rejected"]:
+        elif item.rejected:
             keyboard_items["Rejected"] = BUTTON_DATA_NOTHING
         else:
-            if item["votesRequired"] > item["votesReceived"]:
+            if item.votesRequired > item.votesReceived:
                 keyboard_items["Approve"] = BUTTON_DATA_APPROVE
                 keyboard_items["Reject"] = BUTTON_DATA_REJECT
 
@@ -610,8 +601,8 @@ class KeelTelegramBot:
         approvals = self._api_client.get_approvals()
 
         for approval in approvals:
-            approval_id = approval["id"]
-            approval_identifier = approval["identifier"]
+            approval_id = approval.id
+            approval_identifier = approval.identifier
             key = f"{approval_id}_{approval_identifier}"
 
             chats = self._message_map.get(key, {})

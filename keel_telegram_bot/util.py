@@ -9,6 +9,7 @@ import iso8601
 from telegram import Bot, Message
 from telegram._utils.types import ReplyMarkup
 
+from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.config import Config
 
 LOGGER = logging.getLogger(__name__)
@@ -116,7 +117,7 @@ def filter_new_by_key(a: List, b: List, key: callable) -> List:
     return result
 
 
-def approval_to_str(data: dict) -> str:
+def approval_to_str(data: Approval) -> str:
     id = data["id"]
     identifier = data["identifier"]
     current_version = data["currentVersion"]
