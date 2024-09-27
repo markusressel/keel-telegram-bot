@@ -118,14 +118,14 @@ def filter_new_by_key(a: List, b: List, key: callable) -> List:
 
 
 def approval_to_str(data: Approval) -> str:
-    id = data["id"]
-    identifier = data["identifier"]
-    current_version = data["currentVersion"]
-    new_version = data["newVersion"]
-    votes_required = data["votesRequired"]
-    votes_received = data["votesReceived"]
-    deadline = iso8601.parse_date(data["deadline"])
-    message = data["message"]
+    id = data.id
+    identifier = data.identifier
+    current_version = data.currentVersion
+    new_version = data.newVersion
+    votes_required = data.votesRequired
+    votes_received = data.votesReceived
+    deadline = iso8601.parse_date(data.deadline)
+    message = data.message
 
     now_utc = datetime.now().replace(microsecond=0).astimezone(tz=timezone.utc)
     deadline_diff = timedelta(seconds=(deadline.replace(microsecond=0) - now_utc).total_seconds())
