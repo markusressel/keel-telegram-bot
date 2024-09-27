@@ -17,6 +17,9 @@ jobs:
   dockerhub:
     runs-on: ubuntu-latest
 
+    matrix:
+      python-version: [ "3.12" ]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
