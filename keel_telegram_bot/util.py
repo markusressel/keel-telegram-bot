@@ -5,7 +5,6 @@ import re
 from datetime import datetime, timezone, timedelta
 from typing import List, Any, Tuple, Dict
 
-import iso8601
 from telegram import Bot, Message
 from telegram._utils.types import ReplyMarkup
 
@@ -124,7 +123,7 @@ def approval_to_str(data: Approval) -> str:
     new_version = data.newVersion
     votes_required = data.votesRequired
     votes_received = data.votesReceived
-    deadline = iso8601.parse_date(data.deadline)
+    deadline = data.deadline
     message = data.message
 
     now_utc = datetime.now().replace(microsecond=0).astimezone(tz=timezone.utc)

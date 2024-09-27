@@ -1,6 +1,8 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import List
 
+from keel_telegram_bot.client import parse_api_datetime
 from keel_telegram_bot.client.types import Provider
 
 
@@ -22,9 +24,9 @@ class Approval:
     votesReceived: int
     voters: List[str]
     rejected: bool
-    deadline: str
-    createdAt: str
-    updatedAt: str
+    deadline: datetime.date
+    createdAt: datetime.date
+    updatedAt: datetime.date
 
     @staticmethod
     def from_dict(data: dict):
@@ -42,7 +44,7 @@ class Approval:
             votesReceived=data["votesReceived"],
             voters=data["voters"],
             rejected=data["rejected"],
-            deadline=data["deadline"],
-            createdAt=data["createdAt"],
-            updatedAt=data["updatedAt"],
+            deadline=parse_api_datetime(data["deadline"]),
+            createdAt=parse_api_datetime(data["createdAt"]),
+            updatedAt=parse_api_datetime(data["updatedAt"]),
         )

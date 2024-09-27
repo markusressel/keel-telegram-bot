@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import List
 
+from keel_telegram_bot.client import parse_api_date
+
 
 @dataclass
 class AuditLogStats:
@@ -14,7 +16,7 @@ class AuditLogStats:
     @staticmethod
     def from_dict(data: dict):
         return AuditLogStats(
-            date=datetime.fromisoformat(data["date"]),
+            date=parse_api_date(data["date"]),
             webhooks=data["webhooks"],
             approved=data["approved"],
             rejected=data["rejected"],
