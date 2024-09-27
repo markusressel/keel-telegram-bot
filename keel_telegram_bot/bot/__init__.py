@@ -179,7 +179,7 @@ class KeelTelegramBot:
             return result
 
         items = self._api_client.get_resources()
-        filtered_items = list(filter(lambda x: filter_resources_by(items, glob, tracked), items))
+        filtered_items = filter_resources_by(items, glob, tracked)
 
         formatted_message = "\n".join(
             list(map(lambda x: f"> {x['namespace']}/{x['name']} {x['policy']} {x['name']}", filtered_items))
