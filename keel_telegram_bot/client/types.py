@@ -18,6 +18,18 @@ class Provider(enum.Enum):
     Kubernetes = "kubernetes"
     Helm = "helm"
 
+    @staticmethod
+    def from_value(value: str):
+        """
+        Get the enum from a value
+        :param value: the value to convert
+        :return: the enum
+        """
+        for provider in Provider:
+            if provider.value == value:
+                return provider
+        raise Exception(f"Unknown provider value: {value}")
+
 
 class Trigger(enum.Enum):
     """
@@ -37,3 +49,15 @@ class SemverPolicyType(enum.Enum):
     Major = "major"
     minor = "minor"
     Patch = "patch"
+
+    @staticmethod
+    def from_value(value: str):
+        """
+        Get the enum from a value
+        :param value: the value to convert
+        :return: the enum
+        """
+        for policy in SemverPolicyType:
+            if policy.value == value:
+                return policy
+        return SemverPolicyType.NNone

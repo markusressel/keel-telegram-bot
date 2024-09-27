@@ -25,12 +25,12 @@ class Resource:
     @staticmethod
     def from_dict(data: dict):
         return Resource(
-            provider=Provider(data["provider"]),
+            provider=Provider.from_value(data["provider"]),
             identifier=data["identifier"],
             name=data["name"],
             namespace=data["namespace"],
             kind=data["kind"],
-            policy=SemverPolicyType(data["policy"]),
+            policy=SemverPolicyType.from_value(data["policy"]),
             images=data["images"],
             labels=data["labels"],
             annotations=data["annotations"],
