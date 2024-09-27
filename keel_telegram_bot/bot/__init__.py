@@ -17,10 +17,11 @@ from keel_telegram_bot.bot.reply_keyboard_handler import ReplyKeyboardHandler
 from keel_telegram_bot.client.api_client import KeelApiClient
 from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.client.resource import Resource
+from keel_telegram_bot.client.tracked_image import TrackedImage
 from keel_telegram_bot.client.types import SemverPolicyType
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.stats import *
-from keel_telegram_bot.util import send_message, approval_to_str, resource_to_str
+from keel_telegram_bot.util import send_message, approval_to_str, resource_to_str, tracked_image_to_str
 
 LOGGER = logging.getLogger(__name__)
 
@@ -52,6 +53,9 @@ class KeelTelegramBot:
                 CommandHandler(COMMAND_LIST_RESOURCES,
                                filters=(~ filters.REPLY) & (~ filters.FORWARDED),
                                callback=self._list_resources_callback),
+                CommandHandler(COMMAND_LIST_TRACKED,
+                               filters=(~ filters.REPLY) & (~ filters.FORWARDED),
+                               callback=self._list_tracked_callback),
                 CommandHandler(COMMAND_LIST_APPROVALS,
                                filters=(~ filters.REPLY) & (~ filters.FORWARDED),
                                callback=self._list_approvals_callback),
@@ -179,8 +183,47 @@ class KeelTelegramBot:
             list(map(lambda x: resource_to_str(x), filtered_items))
         )
 
-        LOGGER.debug(
-            f"Listing resources for chat '{chat_id}', filtered by '{glob}', found {len(filtered_items)} items: {formatted_message}")
+        await send_message(bot, chat_id, formatted_message, reply_to=message.message_id)
+
+    @COMMAND_TIME_LIST_TRACKED.time()
+    @command(name=COMMAND_LIST_TRACKED,
+             description="List tracked images.",
+             arguments=[
+                 Argument(name=["glob", "f"], description="Filter entries using the given text",
+                          example="	deployment/myimage", optional=True),
+                 Flag(name=["tracked", "t"], description="Only list tracked resources"),
+             ],
+             permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
+    async def _list_tracked_callback(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE,
+        glob: str or None,
+    ) -> None:
+        """
+        List tracked images
+        :param update: the chat update object
+        :param context: telegram context
+        :param glob: (optional) filter glob
+        """
+        bot = context.bot
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+
+        def filter_tracked_images_by(resources: List[TrackedImage], glob: str or None) -> List[TrackedImage]:
+            result = resources
+            if glob is not None:
+                result = list(filter(
+                    lambda x: re.search(glob, x.image) or re.search(glob, x.namespace) or re.search(glob,
+                                                                                                    x.policy.value) or any(
+                        list(map(lambda y: re.search(glob, y), x.images))), resources))
+
+            return result
+
+        items = self._api_client.get_tracked()
+        filtered_items = filter_tracked_images_by(items, glob)
+
+        formatted_message = "\n".join(
+            list(map(lambda x: tracked_image_to_str(x), filtered_items))
+        )
 
         await send_message(bot, chat_id, formatted_message, reply_to=message.message_id)
 

@@ -39,6 +39,18 @@ class Trigger(enum.Enum):
     Poll = "poll"
     Approval = "approval"
 
+    @staticmethod
+    def from_value(value: str):
+        """
+        Get the enum from a value
+        :param value: the value to convert
+        :return: the enum
+        """
+        for trigger in Trigger:
+            if trigger.value.lower() == value.lower():
+                return trigger
+        raise Exception(f"Unknown trigger value: {value}")
+
 
 class SemverPolicyType(enum.Enum):
     """

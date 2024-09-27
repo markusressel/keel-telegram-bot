@@ -6,6 +6,7 @@ from keel_telegram_bot.const import *
 COMMAND_TIME = Summary('command_processing_seconds', 'Time spent in a command handler', ['command'])
 COMMAND_TIME_START = COMMAND_TIME.labels(command=COMMAND_START)
 COMMAND_TIME_LIST_RESOURCES = COMMAND_TIME.labels(command=COMMAND_LIST_RESOURCES[0])
+COMMAND_TIME_LIST_TRACKED = COMMAND_TIME.labels(command=COMMAND_LIST_TRACKED[0])
 COMMAND_TIME_LIST_APPROVALS = COMMAND_TIME.labels(command=COMMAND_LIST_APPROVALS[0])
 COMMAND_TIME_APPROVE = COMMAND_TIME.labels(command=COMMAND_APPROVE[0])
 COMMAND_TIME_REJECT = COMMAND_TIME.labels(command=COMMAND_REJECT[0])

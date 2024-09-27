@@ -7,6 +7,7 @@ from requests.auth import HTTPBasicAuth
 from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.client.daily_stats import DailyStats
 from keel_telegram_bot.client.resource import Resource
+from keel_telegram_bot.client.tracked_image import TrackedImage
 from keel_telegram_bot.client.types import Action, Provider, Trigger
 from keel_telegram_bot.const import REQUESTS_TIMEOUT
 
@@ -38,11 +39,13 @@ class KeelApiClient:
         result = [Resource.from_dict(resource) for resource in response]
         return result
 
-    def get_tracked(self) -> List[dict]:
+    def get_tracked(self) -> List[TrackedImage]:
         """
         Returns a list of all tracked images
         """
-        return self._do_request(GET, self._base_url + "/v1/tracked")
+        response = self._do_request(GET, self._base_url + "/v1/tracked")
+        result = [TrackedImage.from_dict(tracked) for tracked in response]
+        return result
 
     def set_tracked(self, identifier: str, provider: Provider, trigger: Trigger, schedule: str or None) -> None:
         """

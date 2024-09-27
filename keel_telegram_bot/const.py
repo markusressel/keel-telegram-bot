@@ -4,7 +4,9 @@ TELEGRAM_CAPTION_LENGTH_LIMIT = 200
 # Commands
 COMMAND_START = "start"
 COMMAND_LIST_RESOURCES = ["resources"]
+COMMAND_LIST_TRACKED = ["tracked"]
 COMMAND_LIST_APPROVALS = ["approvals"]
+COMMAND_SET_APPROVAL_COUNT = ["set_approval_count"]
 COMMAND_APPROVE = ["approve", "a"]
 COMMAND_REJECT = ["reject", "r"]
 COMMAND_DELETE = ["delete", "d"]

@@ -10,6 +10,7 @@ from telegram._utils.types import ReplyMarkup
 
 from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.client.resource import Resource
+from keel_telegram_bot.client.tracked_image import TrackedImage
 from keel_telegram_bot.config import Config
 
 LOGGER = logging.getLogger(__name__)
@@ -195,6 +196,10 @@ def resource_to_str(r: Resource) -> str:
         + annotation_lines
         + label_lines
     )
+
+
+def tracked_image_to_str(data: TrackedImage) -> str:
+    return f"{data.provider}/{data.namespace}/{data.image} ({data.policy.value})"
 
 
 def deadline_diff_to_str(deadline_diff) -> str:
