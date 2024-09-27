@@ -328,19 +328,31 @@ class KeelTelegramBot:
         message = update.effective_message
         chat_id = update.effective_chat.id
 
-        self._api_client.get_resources()
+        async def execute(update: Update, context: ContextTypes.DEFAULT_TYPE, item: Resource, data: dict):
+            bot = context.bot
+            message = update.effective_message
+            chat_id = update.effective_chat.id
 
-        self._api_client.set_required_approvals_count(
-            identifier=identifier,
-            provider=Provider.Kubernetes,
-            votes_required=count
+            self._api_client.set_required_approvals_count(
+                identifier=identifier,
+                provider=Provider.Kubernetes,
+                votes_required=count
+            )
+
+            resource = self._api_client.get_resource(identifier=identifier)
+            resource_lines = resource_to_str(resource)
+            text = resource_lines
+
+            await send_message(bot, chat_id, text, reply_to=message.message_id)
+
+        items = self._api_client.get_resources()
+        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x.identifier), items))
+
+        # then fuzzy match to "identifier"
+        await self._response_handler.await_user_selection(
+            update, context, identifier, choices=items, key=lambda x: x.identifier,
+            callback=execute,
         )
-
-        resource = self._api_client.get_resource(identifier=identifier)
-        resource_lines = resource_to_str(resource)
-        text = resource_lines
-
-        await send_message(bot, chat_id, text, reply_to=message.message_id)
 
     @COMMAND_TIME_APPROVE.time()
     @command(name=COMMAND_APPROVE,
