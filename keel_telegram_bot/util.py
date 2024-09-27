@@ -179,8 +179,13 @@ def resource_to_str(r: Resource) -> str:
 
     annotation_lines = []
     if len(r.annotations) > 0:
-        filtered_annotations = list(filter(lambda x: not x.startswith("keel.sh"), r.annotations))
-        annotation_lines = list(map(lambda x: f"    {x}: {filtered_annotations[x]}", filtered_annotations))
+        filtered_annotations = {}
+        for key, value in r.annotations.items():
+            if key.startswith("keel.sh"):
+                filtered_annotations[key] = value
+
+        annotation_lines = list(
+            map(lambda x: f"    {x[0]}: {x[1]}", filtered_annotations.items()))
         annotation_lines = ["  Annotations:"] + annotation_lines
 
     return "\n".join(
