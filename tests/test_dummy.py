@@ -63,4 +63,5 @@ class DummyTest(TestBase):
         })
 
         result = resource_to_str(resource)
+        print("")
         print(result)

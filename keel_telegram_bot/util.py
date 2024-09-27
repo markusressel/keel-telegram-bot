@@ -157,9 +157,24 @@ def approval_to_str(data: Approval) -> str:
 
 
 def resource_to_str(r: Resource) -> str:
-    image_lines = list(map(lambda x: f"    {x}", r.images))
+    identifier_lines = ["  Identifier: " + r.identifier]
+    policy_lines = ["  Policy: " + r.policy.value]
+
+    if len(r.images) > 1:
+        image_lines = list(map(lambda x: f"    {x}", r.images))
+        image_lines = ["  Images:"] + image_lines
+    else:
+        image_lines = ["  Image: " + r.images[0]]
+
+    label_lines = list(map(lambda x: f"    {x}: {r.labels[x]}", r.labels))
+    label_lines = ["  Labels:"] + label_lines
+
     return "\n".join(
-        [f"> {r.namespace}/{r.name} P: {r.policy.value}"] + image_lines
+        [f"> {r.namespace}/{r.name}"]
+        + identifier_lines
+        + policy_lines
+        + image_lines
+        + label_lines
     )
 
 
