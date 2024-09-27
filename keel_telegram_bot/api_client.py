@@ -148,8 +148,8 @@ class KeelApiClient:
         self._do_request(POST, self._base_url + "/v1/approvals", json={
             "id": id,
             "identifier": identifier,
-            "action": action.value,
             "voter": voter,
+            "action": action.value,
         })
 
     def _do_request(self, method: str = GET, url: str = "/", params: dict = None,
