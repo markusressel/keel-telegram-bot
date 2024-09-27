@@ -5,7 +5,7 @@ import re
 from datetime import datetime, timezone, timedelta
 from typing import List, Any, Tuple, Dict
 
-from telegram import Bot, Message
+from telegram import Bot, Message, LinkPreviewOptions
 from telegram._utils.types import ReplyMarkup
 
 from keel_telegram_bot.client.approval import Approval
@@ -50,8 +50,11 @@ def format_for_single_line_log(text: str) -> str:
     return " ".join(text.split())
 
 
-async def send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = None, reply_to: int = None,
-                       menu: ReplyMarkup = None) -> Message or List[Message]:
+async def send_message(
+    bot: Bot, chat_id: str, message: str, parse_mode: str = None, reply_to: int = None,
+    menu: ReplyMarkup = None,
+    link_preview_options: LinkPreviewOptions = LinkPreviewOptions(is_disabled=True)
+) -> Message or List[Message]:
     """
     Sends a text message to the given chat
     :param bot: the bot
@@ -60,6 +63,7 @@ async def send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = N
     :param parse_mode: specify whether to parse the text as markdown or HTML
     :param reply_to: the message product_id to reply to
     :param menu: inline keyboard menu markup
+    :param link_preview_options: link preview options
     """
     from emoji import emojize
 
@@ -73,7 +77,8 @@ async def send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = N
         message = await bot.send_message(
             chat_id=chat_id, parse_mode=parse_mode, text=message_part,
             reply_to_message_id=reply_to,
-            reply_markup=menu
+            reply_markup=menu,
+            link_preview_options=link_preview_options
         )
         messages.append(message)
 
