@@ -1,4 +1,6 @@
+import enum
 import logging
+from collections import namedtuple
 from typing import List
 
 import requests
@@ -13,9 +15,11 @@ from keel_telegram_bot.const import REQUESTS_TIMEOUT
 
 LOGGER = logging.getLogger(__name__)
 
-GET = "get"
-POST = "post"
-PUT = "put"
+
+class HttpMethod(namedtuple('HttpMethod', 'name method'), enum.Enum):
+    GET = "get", requests.get
+    POST = "post", requests.post
+    PUT = "put", requests.put
 
 
 class KeelApiClient:
@@ -35,7 +39,7 @@ class KeelApiClient:
         """
         Returns a list of all resources
         """
-        response = self._do_request(GET, self._base_url + "/v1/resources")
+        response = self._do_request(HttpMethod.GET, self._base_url + "/v1/resources")
         result = [Resource.from_dict(resource) for resource in response]
         return result
 
@@ -53,7 +57,7 @@ class KeelApiClient:
         """
         Returns a list of all tracked images
         """
-        response = self._do_request(GET, self._base_url + "/v1/tracked")
+        response = self._do_request(HttpMethod.GET, self._base_url + "/v1/tracked")
         result = [TrackedImage.from_dict(tracked) for tracked in response]
         return result
 
@@ -65,7 +69,7 @@ class KeelApiClient:
         :param trigger: the trigger of the image
         :param schedule: the schedule of the image
         """
-        self._do_request(PUT, self._base_url + "/v1/tracked", json={
+        self._do_request(HttpMethod.PUT, self._base_url + "/v1/tracked", json={
             "identifier": identifier,
             "provider": provider.value,
             "trigger": trigger.value,
@@ -81,7 +85,7 @@ class KeelApiClient:
         :param provider: the name of the voter
         :param votes_required: the required approvals count
         """
-        self._do_request(PUT, self._base_url + "/v1/approvals", json={
+        self._do_request(HttpMethod.PUT, self._base_url + "/v1/approvals", json={
             "identifier": identifier,
             "provider": provider.value,
             "votesRequired": votes_required,
@@ -93,7 +97,7 @@ class KeelApiClient:
         :param archived: True for archived, False for not archived, None for all
         :return: a list of all approvals matching criteria
         """
-        response = self._do_request(GET, self._base_url + "/v1/approvals")
+        response = self._do_request(HttpMethod.GET, self._base_url + "/v1/approvals")
         result = [Approval.from_dict(approval) for approval in response]
 
         if rejected is not None:
@@ -138,7 +142,7 @@ class KeelApiClient:
         :param voter: name of the voter
         :param action: the action to perform
         """
-        self._do_request(POST, self._base_url + "/v1/approvals", json={
+        self._do_request(HttpMethod.POST, self._base_url + "/v1/approvals", json={
             "id": id,
             "identifier": identifier,
             "voter": voter,
@@ -149,15 +153,15 @@ class KeelApiClient:
         """
         Returns the stats
         """
-        result = self._do_request(GET, self._base_url + "/v1/stats")
+        result = self._do_request(HttpMethod.GET, self._base_url + "/v1/stats")
         return DailyStats.from_dict(result)
 
-    def _do_request(self, method: str = GET, url: str = "/", params: dict = None,
+    def _do_request(self, method: HttpMethod = HttpMethod.GET, url: str = "/", params: dict = None,
                     json: dict = None) -> list or dict or None:
         """
         Executes a http request based on the given parameters
 
-        :param method: the method to use (GET, POST)
+        :param method: the method to use (GET, PUT, POST)
         :param url: the url to use
         :param params: query parameters that will be appended to the url
         :param json: request body
@@ -166,16 +170,7 @@ class KeelApiClient:
         headers = []
         url = self._create_request_url(url, params)
 
-        if method is GET:
-            method = requests.get
-        elif method is POST:
-            method = requests.post
-        elif method is PUT:
-            method = requests.put
-        else:
-            raise ValueError("Unsupported method: {}".format(method))
-
-        response = method(url, headers=headers, auth=self._auth, json=json, timeout=REQUESTS_TIMEOUT)
+        response = method.method(url, headers=headers, auth=self._auth, json=json, timeout=REQUESTS_TIMEOUT)
 
         response.raise_for_status()
         # some responses do not return data so we just ignore the body in that case
