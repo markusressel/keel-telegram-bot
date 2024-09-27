@@ -148,12 +148,15 @@ class KeelTelegramBot:
              arguments=[
                  Argument(name=["glob", "f"], description="Filter entries using the given text",
                           example="	deployment/myimage", optional=True),
+                 Argument(name=["limit", "l"], description="Limit the number of entries", type=int,
+                          example="10", optional=True, default=10),
                  Flag(name=["tracked", "t"], description="Only list tracked resources"),
              ],
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _list_resources_callback(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE,
         glob: str or None,
+        limit: int,
         tracked: bool,
     ) -> None:
         """
@@ -177,6 +180,9 @@ class KeelTelegramBot:
             if tracked:
                 result = list(filter(lambda x: x.policy != SemverPolicyType.NNone, result))
 
+            # apply limit
+            result = result[:limit]
+
             return result
 
         items = self._api_client.get_resources()
@@ -194,12 +200,14 @@ class KeelTelegramBot:
              arguments=[
                  Argument(name=["glob", "f"], description="Filter entries using the given text",
                           example="	deployment/myimage", optional=True),
-                 Flag(name=["tracked", "t"], description="Only list tracked resources"),
+                 Argument(name=["limit", "l"], description="Limit the number of entries", type=int,
+                          example="10", optional=True, default=10),
              ],
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _list_tracked_callback(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE,
         glob: str or None,
+        limit: int,
     ) -> None:
         """
         List tracked images
@@ -219,6 +227,9 @@ class KeelTelegramBot:
                                                                                                     x.policy.value) or any(
                         list(map(lambda y: re.search(glob, y), x.images))), resources))
 
+            # apply limit
+            result = result[:limit]
+
             return result
 
         items = self._api_client.get_tracked()
@@ -234,13 +245,17 @@ class KeelTelegramBot:
     @command(name=COMMAND_LIST_APPROVALS,
              description="List pending approvals",
              arguments=[
+                 Argument(name=["limit", "l"], description="Limit the number of entries per category", type=int,
+                          example="3", optional=True, default=3),
                  Flag(name=["archived", "h"], description="Include archived items"),
                  Flag(name=["approved", "a"], description="Include approved items"),
                  Flag(name=["rejected", "r"], description="Include rejected items"),
              ],
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
-    async def _list_approvals_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
-                                       archived: bool, approved: bool, rejected: bool) -> None:
+    async def _list_approvals_callback(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE,
+        limit: int,
+        archived: bool, approved: bool, rejected: bool) -> None:
         """
         List pending approvals
         """
@@ -259,30 +274,35 @@ class KeelTelegramBot:
         approved_items = list(
             filter(lambda x: x not in rejected_items and x not in archived_items and x not in pending_items, items))
 
+        rejected_items_limited = rejected_items[:limit]
+        archived_items_limited = archived_items[:limit]
+        pending_items_limited = pending_items[:limit]
+        approved_items_limited = approved_items[:limit]
+
         lines = []
         if archived:
             lines.append("\n".join([
-                f"<b>=== Archived ({len(archived_items)}) ===</b>",
+                f"<b>=== Archived ({len(archived_items_limited)}/{len(archived_items)}) ===</b>",
                 "",
                 "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), archived_items)))
             ]).strip())
 
         if approved:
             lines.append("\n".join([
-                f"<b>=== Approved ({len(approved_items)}) ===</b>",
+                f"<b>=== Approved ({len(approved_items_limited)}/{len(approved_items)}) ===</b>",
                 "",
                 "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), approved_items))),
             ]).strip())
 
         if rejected:
             lines.append("\n".join([
-                f"<b>=== Rejected ({len(rejected_items)}) ===</b>",
+                f"<b>=== Rejected ({len(rejected_items_limited)}{len(rejected_items)}) ===</b>",
                 "",
                 "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), rejected_items))),
             ]).strip())
 
         lines.append("\n".join([
-            f"<b>=== Pending ({len(pending_items)}) ===</b>",
+            f"<b>=== Pending ({len(pending_items_limited)}/{len(pending_items)}) ===</b>",
             "",
             "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), pending_items))),
         ]))
