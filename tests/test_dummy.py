@@ -37,22 +37,24 @@ class DummyTest(TestBase):
     def test_resource_format(self):
         resource = Resource.from_dict({
             "provider": "kubernetes",
-            "identifier": "deployment/local-path-storage/local-path-provisioner:v0.0.19",
-            "name": "local-path-provisioner",
-            "namespace": "local-path-storage",
-            "kind": "deployment",
+            "identifier": "statefulset/py-image-dedup/deduplicator",
+            "name": "deduplicator",
+            "namespace": "py-image-dedup",
+            "kind": "statefulset",
             "policy": "semver",
             "images": [
                 "codeberg.org/forgejo/forgejo:1.21.11-0",
                 "library/memcached:1.6.31"
             ],
             "labels": {
+                "workload.user.cattle.io/workloadselector": "statefulSet-py-image-dedup-deduplicator",
+            },
+            "annotations": {
                 "keel.sh/approvals": 1,
                 "keel.sh/policy": "major",
                 "keel.sh/pollSchedule": "@every 24h",
                 "keel.sh/trigger": "poll",
             },
-            "annotations": {},
             "status": {
                 "replicas": 1,
                 "updatedReplicas": 1,

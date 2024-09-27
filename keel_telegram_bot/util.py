@@ -162,7 +162,7 @@ def approval_to_str(data: Approval) -> str:
 
 
 def resource_to_str(r: Resource) -> str:
-    identifier_lines = ["  Identifier: " + r.identifier]
+    header_line = f"> {r.identifier}"
     policy_lines = ["  Policy: " + r.policy.value]
 
     image_lines = []
@@ -179,12 +179,12 @@ def resource_to_str(r: Resource) -> str:
 
     annotation_lines = []
     if len(r.annotations) > 0:
-        annotation_lines = list(map(lambda x: f"    {x}: {r.annotations[x]}", r.annotations))
+        filtered_annotations = list(filter(lambda x: not x.startswith("keel.sh"), r.annotations))
+        annotation_lines = list(map(lambda x: f"    {x}: {filtered_annotations[x]}", filtered_annotations))
         annotation_lines = ["  Annotations:"] + annotation_lines
 
     return "\n".join(
-        [f"> {r.namespace}/{r.name}"]
-        + identifier_lines
+        [header_line]
         + policy_lines
         + image_lines
         + label_lines
