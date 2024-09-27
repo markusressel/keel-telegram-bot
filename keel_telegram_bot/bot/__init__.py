@@ -174,7 +174,10 @@ class KeelTelegramBot:
             list(map(lambda x: f"> {x['namespace']}/{x['name']} {x['policy']} {x['name']}", filtered_items))
         )
 
-        await send_message(bot, chat_id, formatted_message, reply_to=message.message_id, parse_mode="HTML")
+        LOGGER.debug(
+            f"Listing resources for chat '{chat_id}', filtered by '{glob}', found {len(filtered_items)} items: {formatted_message}")
+
+        await send_message(bot, chat_id, formatted_message, reply_to=message.message_id)
 
     @COMMAND_TIME_LIST_APPROVALS.time()
     @command(name=COMMAND_LIST_APPROVALS,
