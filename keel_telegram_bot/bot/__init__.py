@@ -20,7 +20,7 @@ from keel_telegram_bot.client.resource import Resource
 from keel_telegram_bot.client.types import SemverPolicyType
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.stats import *
-from keel_telegram_bot.util import send_message, approval_to_str
+from keel_telegram_bot.util import send_message, approval_to_str, resource_to_str
 
 LOGGER = logging.getLogger(__name__)
 
@@ -176,7 +176,7 @@ class KeelTelegramBot:
         filtered_items = filter_resources_by(items, glob, tracked)
 
         formatted_message = "\n".join(
-            list(map(lambda x: f"> {x.namespace}/{x.name} {x.policy} {x.name}", filtered_items))
+            list(map(lambda x: resource_to_str(x), filtered_items))
         )
 
         LOGGER.debug(

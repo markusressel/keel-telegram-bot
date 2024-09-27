@@ -9,6 +9,7 @@ from telegram import Bot, Message
 from telegram._utils.types import ReplyMarkup
 
 from keel_telegram_bot.client.approval import Approval
+from keel_telegram_bot.client.resource import Resource
 from keel_telegram_bot.config import Config
 
 LOGGER = logging.getLogger(__name__)
@@ -142,6 +143,14 @@ def approval_to_str(data: Approval) -> str:
     ])
 
     return text
+
+
+def resource_to_str(r: Resource) -> str:
+    image_lines = list(map(lambda x: f"    {x}", r.images))
+    return "\n".join(
+        list(f"> {r.namespace}/{r.name} P: {r.policy.value}") + image_lines
+    )
+
 
 
 def deadline_diff_to_str(deadline_diff) -> str:
