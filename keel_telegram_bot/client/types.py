@@ -26,7 +26,7 @@ class Provider(enum.Enum):
         :return: the enum
         """
         for provider in Provider:
-            if provider.value == value:
+            if provider.value.lower() == value.lower():
                 return provider
         raise Exception(f"Unknown provider value: {value}")
 
@@ -58,6 +58,6 @@ class SemverPolicyType(enum.Enum):
         :return: the enum
         """
         for policy in SemverPolicyType:
-            if policy.value == value:
+            if policy.value.lower() == value.lower():
                 return policy
         return SemverPolicyType.NNone
