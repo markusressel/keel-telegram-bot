@@ -51,7 +51,7 @@ def format_for_single_line_log(text: str) -> str:
 
 
 async def send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = None, reply_to: int = None,
-                       menu: ReplyMarkup = None) -> Message:
+                       menu: ReplyMarkup = None) -> Message or List[Message]:
     """
     Sends a text message to the given chat
     :param bot: the bot
@@ -64,11 +64,22 @@ async def send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = N
     from emoji import emojize
 
     emojized_text = emojize(message, language='alias')
-    return await bot.send_message(
-        chat_id=chat_id, parse_mode=parse_mode, text=emojized_text,
-        reply_to_message_id=reply_to,
-        reply_markup=menu
-    )
+
+    # automatically split long messages
+    messages = []
+    for i in range(0, len(emojized_text), 4096):
+        message_part = emojized_text[i:i + 4096]
+
+        message = await bot.send_message(
+            chat_id=chat_id, parse_mode=parse_mode, text=message_part,
+            reply_to_message_id=reply_to,
+            reply_markup=menu
+        )
+        messages.append(message)
+
+    if len(messages) == 1:
+        return messages[0]
+    return messages
 
 
 def fuzzy_match(term: str, choices: List[Any], limit: int = None, key=lambda x: x, ignorecase: bool = True) -> List[
