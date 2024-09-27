@@ -17,8 +17,10 @@ jobs:
   dockerhub:
     runs-on: ubuntu-latest
 
-    matrix:
-      python-version: [ "3.12" ]
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: [ "3.12" ]
 
     steps:
       - name: Checkout
