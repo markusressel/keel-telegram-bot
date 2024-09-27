@@ -1,3 +1,4 @@
+import enum
 import logging
 from typing import List
 
@@ -10,6 +11,33 @@ LOGGER = logging.getLogger(__name__)
 
 GET = "get"
 POST = "post"
+PUT = "put"
+
+
+class Action(enum.Enum):
+    """
+    Enum for action types
+    """
+    Approve = "approve"
+    Reject = "reject"
+    Delete = "delete"
+    Archive = "archive"
+
+
+class Provider(enum.Enum):
+    """
+    Enum for provider types
+    """
+    Kubernetes = "kubernetes"
+    Helm = "helm"
+
+
+class Trigger(enum.Enum):
+    """
+    Enum for trigger types
+    """
+    Default = "default"
+    Poll = "poll"
 
 
 class KeelApiClient:
@@ -30,6 +58,42 @@ class KeelApiClient:
         Returns a list of all resources
         """
         return self._do_request(GET, self._base_url + "/v1/resources")
+
+    def get_tracked(self) -> List[dict]:
+        """
+        Returns a list of all tracked images
+        """
+        return self._do_request(GET, self._base_url + "/v1/tracked")
+
+    def set_tracked(self, identifier: str, provider: Provider, trigger: Trigger, schedule: str or None) -> None:
+        """
+        Set the tracking properties for an image
+        :param identifier: the identifier of the image
+        :param provider: the provider of the image
+        :param trigger: the trigger of the image
+        :param schedule: the schedule of the image
+        """
+        self._do_request(PUT, self._base_url + "/v1/tracked", json={
+            "identifier": identifier,
+            "provider": provider.value,
+            "trigger": trigger.value,
+            "schedule": schedule,
+        })
+
+    def set_required_approvals_count(
+        self, identifier: str, provider: Provider, votes_required: int
+    ) -> None:
+        """
+        Set the required approvals count for an image
+        :param identifier: the identifier of the image
+        :param provider: the name of the voter
+        :param votes_required: the required approvals count
+        """
+        self._do_request(PUT, self._base_url + "/v1/approvals", json={
+            "identifier": identifier,
+            "provider": provider.value,
+            "votesRequired": votes_required,
+        })
 
     def get_approvals(self, rejected: bool = None, archived: bool = None) -> List[dict]:
         """
@@ -53,12 +117,7 @@ class KeelApiClient:
         :param identifier: identifier for the approval request, something like "default/myimage:1.5.5"
         :param voter: name of the voter
         """
-        self._do_request(POST, self._base_url + "/v1/approvals", json={
-            "id": id,
-            "identifier": identifier,
-            "action": "approve",
-            "voter": voter,
-        })
+        self._run_approval_action(id, identifier, voter, Action.Approve)
 
     def reject(self, id: str, identifier: str, voter: str) -> None:
         """
@@ -67,12 +126,7 @@ class KeelApiClient:
         :param identifier: identifier for the approval request, something like "default/myimage:1.5.5"
         :param voter: name of the voter
         """
-        self._do_request(POST, self._base_url + "/v1/approvals", json={
-            "id": id,
-            "identifier": identifier,
-            "action": "reject",
-            "voter": voter,
-        })
+        self._run_approval_action(id, identifier, voter, Action.Reject)
 
     def delete(self, id: str, identifier: str, voter: str) -> None:
         """
@@ -81,10 +135,20 @@ class KeelApiClient:
         :param identifier: identifier for the approval request, something like "default/myimage:1.5.5"
         :param voter: name of the voter
         """
+        self._run_approval_action(id, identifier, voter, Action.Delete)
+
+    def _run_approval_action(self, id: str, identifier: str, voter: str, action: Action) -> None:
+        """
+        Perform an action on a pending approval
+        :param id: item id
+        :param identifier: identifier for the approval request, something like "default/myimage:1.5.5"
+        :param voter: name of the voter
+        :param action: the action to perform
+        """
         self._do_request(POST, self._base_url + "/v1/approvals", json={
             "id": id,
             "identifier": identifier,
-            "action": "delete",
+            "action": action.value,
             "voter": voter,
         })
 
