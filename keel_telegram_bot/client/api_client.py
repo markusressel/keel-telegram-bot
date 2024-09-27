@@ -170,6 +170,8 @@ class KeelApiClient:
             method = requests.get
         elif method is POST:
             method = requests.post
+        elif method is PUT:
+            method = requests.put
         else:
             raise ValueError("Unsupported method: {}".format(method))
 
