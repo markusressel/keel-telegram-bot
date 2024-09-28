@@ -112,7 +112,7 @@ class Policy(ABC):
         raise NotImplementedError()
 
 
-class SemverPolicyType(enum.Enum, Policy):
+class SemverPolicyType(Policy):
     """
     Enum for semver policy types
     """
@@ -124,13 +124,24 @@ class SemverPolicyType(enum.Enum, Policy):
     Force = "force"
 
     @staticmethod
+    def values() -> ["SemverPolicyType"]:
+        return [
+            SemverPolicyType.NNone,
+            SemverPolicyType.All,
+            SemverPolicyType.Major,
+            SemverPolicyType.Minor,
+            SemverPolicyType.Patch,
+            SemverPolicyType.Force
+        ]
+
+    @staticmethod
     def from_value(value: str):
         """
         Get the enum from a value
         :param value: the value to convert
         :return: the enum
         """
-        for policy in SemverPolicyType:
+        for policy in SemverPolicyType.values():
             if policy.value.lower() == value.lower():
                 return policy
         return SemverPolicyType.NNone
