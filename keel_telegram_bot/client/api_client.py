@@ -122,8 +122,11 @@ class KeelApiClient:
         :param schedule: the schedule of the image
         """
         resource = self.get_resource(identifier)
-        tracked_image = self.get_tracked_image(resource.namespace, resource.name)
-        self.set_tracked(identifier, resource.provider, tracked_image.trigger, schedule)
+        self._do_request(HttpMethod.PUT, self._base_url + "/v1/tracked", json={
+            "identifier": identifier,
+            "provider": resource.provider.value,
+            "schedule": schedule.value,
+        })
 
     def set_trigger(self, identifier: str, trigger: Trigger) -> None:
         """
@@ -132,8 +135,11 @@ class KeelApiClient:
         :param trigger: the trigger of the image
         """
         resource = self.get_resource(identifier)
-        tracked_image = self.get_tracked_image(resource.namespace, resource.name)
-        self.set_tracked(identifier, resource.provider, trigger, tracked_image.poll_schedule)
+        self._do_request(HttpMethod.PUT, self._base_url + "/v1/tracked", json={
+            "identifier": identifier,
+            "provider": resource.provider.value,
+            "trigger": trigger.value,
+        })
 
     def get_approvals(self, rejected: bool = None, archived: bool = None) -> List[Approval]:
         """

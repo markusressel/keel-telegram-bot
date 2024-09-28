@@ -1,0 +1,524 @@
+[
+  {
+    "image": "rpardini/docker-registry-proxy:0.6.4",
+    "trigger": "poll",
+    "pollSchedule": "@every 1m",
+    "provider": "kubernetes",
+    "namespace": "docker-proxy",
+    "policy": "all",
+    "registry": "ghcr.io"
+  },
+  {
+    "image": "squat/kilo:0.6.0",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "kube-system",
+    "policy": "all",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "metallb/speaker:v0.14.5",
+    "trigger": "poll",
+    "pollSchedule": "@every 1m",
+    "provider": "kubernetes",
+    "namespace": "metallb-system",
+    "policy": "force",
+    "registry": "quay.io"
+  },
+  {
+    "image": "markusressel/deinemudda:v1.3.14",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "deinemudda",
+    "policy": "all",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "markusressel/deinemudda:v1.3.14",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "deinemudda",
+    "policy": "major",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "esphome/esphome:2024.10.0-dev20240927",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "esphome",
+    "policy": "all",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "yurinnick/folding-at-home:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "foldingathome",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "ekeih/satisfactory-bot/server-public:2024.09.25-15811013",
+    "trigger": "poll",
+    "pollSchedule": "@every 10m",
+    "provider": "kubernetes",
+    "namespace": "gameservers",
+    "policy": "all",
+    "registry": "ghcr.io"
+  },
+  {
+    "image": "lloesche/valheim-server:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "gameservers",
+    "policy": "force",
+    "registry": "ghcr.io"
+  },
+  {
+    "image": "forgejo/forgejo:1.21.11-0",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "gitea",
+    "policy": "major",
+    "registry": "codeberg.org"
+  },
+  {
+    "image": "library/memcached:1.6.31",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "gitea",
+    "policy": "major",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "grafana/grafana:11.2.1",
+    "trigger": "poll",
+    "pollSchedule": "@every 1m",
+    "provider": "kubernetes",
+    "namespace": "grafana",
+    "policy": "all",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "grafana/grafana-image-renderer:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 1m",
+    "provider": "kubernetes",
+    "namespace": "grafana",
+    "policy": "all",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "home-assistant/home-assistant:2024.9.3",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "homeassistant",
+    "policy": "all",
+    "registry": "ghcr.io"
+  },
+  {
+    "image": "rhasspy/wyoming-whisper:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "homeassistant",
+    "policy": "all",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "rhasspy/wyoming-piper:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "homeassistant",
+    "policy": "all",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "rhasspy/wyoming-openwakeword:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "homeassistant",
+    "policy": "all",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "markusressel/icantbelieveitsnotvaletudo:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "icantbelieveitsnotvaletudo",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "ekeih/infinitewisdom:4.6.13",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "infinitewisdom",
+    "policy": "all",
+    "registry": "ghcr.io"
+  },
+  {
+    "image": "markusressel/keel:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 1h",
+    "provider": "kubernetes",
+    "namespace": "keel",
+    "policy": "all",
+    "registry": "ghcr.io"
+  },
+  {
+    "image": "webhookrelay/webhookrelayd:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 1h",
+    "provider": "kubernetes",
+    "namespace": "keel",
+    "policy": "all",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "markusressel/keel-telegram-bot:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 1h",
+    "provider": "kubernetes",
+    "namespace": "keel",
+    "policy": "all",
+    "registry": "ghcr.io"
+  },
+  {
+    "image": "lancachenet/monolithic:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "lancache",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "lancachenet/sniproxy:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "lancache",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "lancachenet/lancache-dns:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "lancache",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "rancher/local-path-provisioner:v0.0.24",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "local-path-storage",
+    "policy": "major",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "library/eclipse-mosquitto:2.0.18",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "mosquitto",
+    "policy": "minor",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "tiangolo/nginx-rtmp:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "nginx-rtmp",
+    "policy": "major",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "pihole/pihole:2024.07.0",
+    "trigger": "poll",
+    "pollSchedule": "@every 1m",
+    "provider": "kubernetes",
+    "namespace": "pihole",
+    "policy": "all",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "prometheus/blackbox-exporter:v0.25.0",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "prometheus",
+    "policy": "major",
+    "registry": "quay.io"
+  },
+  {
+    "image": "datarhei/restreamer:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "restreamer",
+    "policy": "major",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "library/teamspeak:3.13.7",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "teamspeak",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "markusressel/telegram-click:v6.0.3",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "telegram-click",
+    "policy": "glob:v*",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "linuxserver/unifi-controller:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "unifi",
+    "policy": "force",
+    "registry": "ghcr.io"
+  },
+  {
+    "image": "mkdocseditor/mkdocseditor-backend:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "wiki",
+    "policy": "all",
+    "registry": "ghcr.io"
+  },
+  {
+    "image": "mkdocseditor/mkdocseditor-web:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "wiki",
+    "policy": "all",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "linuxserver/healthchecks:v1.17.0-ls72",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "cron",
+    "policy": "force",
+    "registry": "ghcr.io"
+  },
+  {
+    "image": "jlesage/jdownloader-2:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "jdownloader",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "vectorim/element-web:v1.11.78",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "matrix",
+    "policy": "major",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "matrixdotorg/synapse:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "matrix",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "mautrix/telegram:v0.12.2",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "matrix",
+    "policy": "force",
+    "registry": "dock.mau.dev"
+  },
+  {
+    "image": "mautrix/signal:v0.4.2",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "matrix",
+    "policy": "force",
+    "registry": "dock.mau.dev"
+  },
+  {
+    "image": "signald/signald:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "matrix",
+    "policy": "force",
+    "registry": "registry.gitlab.com"
+  },
+  {
+    "image": "ekeih/alerticular:0.1.3",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "monitoring",
+    "policy": "force",
+    "registry": "ghcr.io"
+  },
+  {
+    "image": "markusressel/mopidy:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "mopidy",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "library/nextcloud:25.0.2",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "nextcloud",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "library/redis:7.4.0",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "nextcloud",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "collabora/code:6.4.3.1",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "nextcloud",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "nileshouseholdmanagement/niles-backend:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "niles",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "nileshouseholdmanagement/niles-telegram:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "niles",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "markusressel/barcode-server:v2.3.3",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "niles",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "drakkan/sftpgo:edge",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "paperless",
+    "policy": "major",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "library/redis:7.4.0",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "paperless",
+    "policy": "major",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "paperless-ngx/paperless-ngx:2.12.1",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "paperless",
+    "policy": "major",
+    "registry": "ghcr.io"
+  },
+  {
+    "image": "plexinc/pms-docker:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "plex",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "markusressel/py-image-dedup:latest",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "py-image-dedup",
+    "policy": "force",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "rhasspy/rhasspy:2.5.11",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "rhasspy",
+    "policy": "major",
+    "registry": "index.docker.io"
+  },
+  {
+    "image": "syncthing/syncthing:1.27.12",
+    "trigger": "poll",
+    "pollSchedule": "@every 24h",
+    "provider": "kubernetes",
+    "namespace": "syncthing",
+    "policy": "major",
+    "registry": "index.docker.io"
+  }
+]

@@ -1,0 +1,1827 @@
+[
+  {
+    "provider": "kubernetes",
+    "identifier": "daemonset/docker-proxy/docker-proxy",
+    "name": "docker-proxy",
+    "namespace": "docker-proxy",
+    "kind": "daemonset",
+    "policy": "all",
+    "images": [
+      "ghcr.io/rpardini/docker-registry-proxy:0.6.4"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "docker-proxy"
+    },
+    "annotations": {
+      "deprecated.daemonset.template.generation": "2",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "all",
+      "keel.sh/pollSchedule": "@every 1m",
+      "keel.sh/trigger": "poll"
+    },
+    "status": {
+      "replicas": 2,
+      "updatedReplicas": 2,
+      "readyReplicas": 2,
+      "availableReplicas": 2,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "daemonset/kube-system/kilo",
+    "name": "kilo",
+    "namespace": "kube-system",
+    "kind": "daemonset",
+    "policy": "all",
+    "images": [
+      "squat/kilo:0.6.0"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "kilo",
+      "app.kubernetes.io/part-of": "kilo"
+    },
+    "annotations": {
+      "deprecated.daemonset.template.generation": "7",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "all",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"DaemonSet\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"kilo\",\"app.kubernetes.io/part-of\":\"kilo\"},\"name\":\"kilo\",\"namespace\":\"kube-system\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"kilo\",\"app.kubernetes.io/part-of\":\"kilo\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"kilo\",\"app.kubernetes.io/part-of\":\"kilo\"}},\"spec\":{\"containers\":[{\"args\":[\"--kubeconfig=/etc/kubernetes/kubeconfig\",\"--hostname=$(NODE_NAME)\",\"--mesh-granularity=full\"],\"env\":[{\"name\":\"NODE_NAME\",\"valueFrom\":{\"fieldRef\":{\"fieldPath\":\"spec.nodeName\"}}}],\"image\":\"squat/kilo:0.6.0\",\"name\":\"kilo\",\"ports\":[{\"containerPort\":1107,\"name\":\"metrics\"}],\"securityContext\":{\"capabilities\":{\"add\":[\"NET_ADMIN\"]},\"privileged\":true},\"volumeMounts\":[{\"mountPath\":\"/etc/cni/net.d\",\"name\":\"cni-conf-dir\"},{\"mountPath\":\"/var/lib/kilo\",\"name\":\"kilo-dir\"},{\"mountPath\":\"/etc/kubernetes\",\"name\":\"kubeconfig\",\"readOnly\":true},{\"mountPath\":\"/lib/modules\",\"name\":\"lib-modules\",\"readOnly\":true},{\"mountPath\":\"/run/xtables.lock\",\"name\":\"xtables-lock\",\"readOnly\":false}]}],\"hostNetwork\":true,\"initContainers\":[{\"args\":[\"/scripts/init.sh\"],\"command\":[\"/bin/sh\"],\"env\":[{\"name\":\"NAMESPACE\",\"valueFrom\":{\"fieldRef\":{\"fieldPath\":\"metadata.namespace\"}}}],\"image\":\"squat/kilo:0.6.0\",\"imagePullPolicy\":\"Always\",\"name\":\"generate-kubeconfig\",\"volumeMounts\":[{\"mountPath\":\"/etc/kubernetes\",\"name\":\"kubeconfig\"},{\"mountPath\":\"/scripts/\",\"name\":\"scripts\",\"readOnly\":true},{\"mountPath\":\"/var/lib/rancher/k3s/agent/\",\"name\":\"k3s-agent\",\"readOnly\":true}]},{\"command\":[\"/bin/sh\",\"-c\",\"set -e -x; cp /opt/cni/bin/* /host/opt/cni/bin/; TMP_CONF=\\\"$CNI_CONF_NAME\\\".tmp; echo \\\"$CNI_NETWORK_CONFIG\\\" \\u003e $TMP_CONF; rm -f /host/etc/cni/net.d/*; mv $TMP_CONF /host/etc/cni/net.d/$CNI_CONF_NAME\"],\"env\":[{\"name\":\"CNI_CONF_NAME\",\"value\":\"10-kilo.conflist\"},{\"name\":\"CNI_NETWORK_CONFIG\",\"valueFrom\":{\"configMapKeyRef\":{\"key\":\"cni-conf.json\",\"name\":\"kilo\"}}}],\"image\":\"squat/kilo:0.6.0\",\"name\":\"install-cni\",\"volumeMounts\":[{\"mountPath\":\"/host/opt/cni/bin\",\"name\":\"cni-bin-dir\"},{\"mountPath\":\"/host/etc/cni/net.d\",\"name\":\"cni-conf-dir\"}]}],\"serviceAccountName\":\"kilo\",\"tolerations\":[{\"effect\":\"NoSchedule\",\"operator\":\"Exists\"},{\"effect\":\"NoExecute\",\"operator\":\"Exists\"}],\"volumes\":[{\"hostPath\":{\"path\":\"/opt/cni/bin\"},\"name\":\"cni-bin-dir\"},{\"hostPath\":{\"path\":\"/etc/cni/net.d\"},\"name\":\"cni-conf-dir\"},{\"hostPath\":{\"path\":\"/var/lib/kilo\"},\"name\":\"kilo-dir\"},{\"emptyDir\":{},\"name\":\"kubeconfig\"},{\"configMap\":{\"name\":\"kilo-scripts\"},\"name\":\"scripts\"},{\"hostPath\":{\"path\":\"/var/lib/rancher/k3s/agent\"},\"name\":\"k3s-agent\"},{\"hostPath\":{\"path\":\"/lib/modules\"},\"name\":\"lib-modules\"},{\"hostPath\":{\"path\":\"/run/xtables.lock\",\"type\":\"FileOrCreate\"},\"name\":\"xtables-lock\"}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version 0.5.0 -\u003e 0.6.0 [2023-05-09T21:02:55Z]"
+    },
+    "status": {
+      "replicas": 2,
+      "updatedReplicas": 2,
+      "readyReplicas": 2,
+      "availableReplicas": 2,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "daemonset/loki/loki-canary",
+    "name": "loki-canary",
+    "namespace": "loki",
+    "kind": "daemonset",
+    "policy": "nil policy",
+    "images": [
+      "docker.io/grafana/loki-canary:3.0.0"
+    ],
+    "labels": {
+      "app.kubernetes.io/component": "canary",
+      "app.kubernetes.io/instance": "loki",
+      "app.kubernetes.io/managed-by": "Helm",
+      "app.kubernetes.io/name": "loki",
+      "app.kubernetes.io/version": "3.0.0",
+      "helm.sh/chart": "loki-6.4.2"
+    },
+    "annotations": {
+      "deprecated.daemonset.template.generation": "1",
+      "meta.helm.sh/release-name": "loki",
+      "meta.helm.sh/release-namespace": "loki"
+    },
+    "status": {
+      "replicas": 2,
+      "updatedReplicas": 2,
+      "readyReplicas": 2,
+      "availableReplicas": 2,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "daemonset/metallb-system/speaker",
+    "name": "speaker",
+    "namespace": "metallb-system",
+    "kind": "daemonset",
+    "policy": "force",
+    "images": [
+      "quay.io/metallb/speaker:v0.14.5"
+    ],
+    "labels": {
+      "app": "metallb",
+      "component": "speaker"
+    },
+    "annotations": {
+      "deprecated.daemonset.template.generation": "13",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 1m",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"DaemonSet\",\"metadata\":{\"annotations\":{},\"labels\":{\"app\":\"metallb\",\"component\":\"speaker\"},\"name\":\"speaker\",\"namespace\":\"metallb-system\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app\":\"metallb\",\"component\":\"speaker\"}},\"template\":{\"metadata\":{\"annotations\":{\"prometheus.io/port\":\"7472\",\"prometheus.io/scrape\":\"true\"},\"labels\":{\"app\":\"metallb\",\"component\":\"speaker\"}},\"spec\":{\"containers\":[{\"args\":[\"--port=7472\",\"--log-level=info\"],\"env\":[{\"name\":\"METALLB_NODE_NAME\",\"valueFrom\":{\"fieldRef\":{\"fieldPath\":\"spec.nodeName\"}}},{\"name\":\"METALLB_HOST\",\"valueFrom\":{\"fieldRef\":{\"fieldPath\":\"status.hostIP\"}}},{\"name\":\"METALLB_ML_BIND_ADDR\",\"valueFrom\":{\"fieldRef\":{\"fieldPath\":\"status.podIP\"}}},{\"name\":\"METALLB_ML_LABELS\",\"value\":\"app=metallb,component=speaker\"},{\"name\":\"METALLB_ML_SECRET_KEY_PATH\",\"value\":\"/etc/ml_secret_key\"}],\"image\":\"quay.io/metallb/speaker:v0.14.5\",\"livenessProbe\":{\"failureThreshold\":3,\"httpGet\":{\"path\":\"/metrics\",\"port\":\"monitoring\"},\"initialDelaySeconds\":10,\"periodSeconds\":10,\"successThreshold\":1,\"timeoutSeconds\":1},\"name\":\"speaker\",\"ports\":[{\"containerPort\":7472,\"name\":\"monitoring\"},{\"containerPort\":7946,\"name\":\"memberlist-tcp\"},{\"containerPort\":7946,\"name\":\"memberlist-udp\",\"protocol\":\"UDP\"}],\"readinessProbe\":{\"failureThreshold\":3,\"httpGet\":{\"path\":\"/metrics\",\"port\":\"monitoring\"},\"initialDelaySeconds\":10,\"periodSeconds\":10,\"successThreshold\":1,\"timeoutSeconds\":1},\"securityContext\":{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"add\":[\"NET_RAW\"],\"drop\":[\"ALL\"]},\"readOnlyRootFilesystem\":true},\"volumeMounts\":[{\"mountPath\":\"/etc/ml_secret_key\",\"name\":\"memberlist\",\"readOnly\":true},{\"mountPath\":\"/etc/metallb\",\"name\":\"metallb-excludel2\",\"readOnly\":true}]}],\"hostNetwork\":true,\"nodeSelector\":{\"kubernetes.io/os\":\"linux\"},\"serviceAccountName\":\"speaker\",\"terminationGracePeriodSeconds\":2,\"tolerations\":[{\"effect\":\"NoSchedule\",\"key\":\"node-role.kubernetes.io/master\",\"operator\":\"Exists\"},{\"effect\":\"NoSchedule\",\"key\":\"node-role.kubernetes.io/control-plane\",\"operator\":\"Exists\"}],\"volumes\":[{\"name\":\"memberlist\",\"secret\":{\"defaultMode\":420,\"secretName\":\"memberlist\"}},{\"configMap\":{\"defaultMode\":256,\"name\":\"metallb-excludel2\"},\"name\":\"metallb-excludel2\"}]}}}}\n"
+    },
+    "status": {
+      "replicas": 2,
+      "updatedReplicas": 2,
+      "readyReplicas": 2,
+      "availableReplicas": 2,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "daemonset/prometheus/prometheus-prometheus-node-exporter",
+    "name": "prometheus-prometheus-node-exporter",
+    "namespace": "prometheus",
+    "kind": "daemonset",
+    "policy": "nil policy",
+    "images": [
+      "quay.io/prometheus/node-exporter:v1.2.2"
+    ],
+    "labels": {
+      "app": "prometheus-node-exporter",
+      "app.kubernetes.io/managed-by": "Helm",
+      "chart": "prometheus-node-exporter-2.0.4",
+      "heritage": "Helm",
+      "jobLabel": "node-exporter",
+      "release": "prometheus"
+    },
+    "annotations": {
+      "deprecated.daemonset.template.generation": "2",
+      "meta.helm.sh/release-name": "prometheus",
+      "meta.helm.sh/release-namespace": "prometheus"
+    },
+    "status": {
+      "replicas": 2,
+      "updatedReplicas": 2,
+      "readyReplicas": 2,
+      "availableReplicas": 2,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "daemonset/wiki/mkdocs",
+    "name": "mkdocs",
+    "namespace": "wiki",
+    "kind": "daemonset",
+    "policy": "nil policy",
+    "images": [
+      "squidfunk/mkdocs-material:9.5.14"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "wiki-mkdocs"
+    },
+    "annotations": {
+      "deprecated.daemonset.template.generation": "3",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "never",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"DaemonSet\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\",\"keel.sh/policy\":\"never\",\"keel.sh/pollSchedule\":\"@every 24h\",\"keel.sh/trigger\":\"poll\"},\"labels\":{\"app.kubernetes.io/name\":\"wiki-mkdocs\"},\"name\":\"mkdocs\",\"namespace\":\"wiki\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"wiki-mkdocs\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"wiki-mkdocs\"}},\"spec\":{\"containers\":[{\"image\":\"squidfunk/mkdocs-material:9.5.14\",\"name\":\"mkdocs\",\"ports\":[{\"containerPort\":8000,\"name\":\"http\",\"protocol\":\"TCP\"}],\"securityContext\":{\"allowPrivilegeEscalation\":false,\"runAsNonRoot\":false},\"volumeMounts\":[{\"mountPath\":\"/docs\",\"name\":\"docs\"}]}],\"volumes\":[{\"name\":\"docs\",\"persistentVolumeClaim\":{\"claimName\":\"docs-mkdocs\"}}]}}}}\n"
+    },
+    "status": {
+      "replicas": 2,
+      "updatedReplicas": 2,
+      "readyReplicas": 2,
+      "availableReplicas": 2,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/cert-manager/cert-manager",
+    "name": "cert-manager",
+    "namespace": "cert-manager",
+    "kind": "deployment",
+    "policy": "nil policy",
+    "images": [
+      "quay.io/jetstack/cert-manager-controller:v1.15.3"
+    ],
+    "labels": {
+      "app": "cert-manager",
+      "app.kubernetes.io/component": "controller",
+      "app.kubernetes.io/instance": "cert-manager",
+      "app.kubernetes.io/name": "cert-manager",
+      "app.kubernetes.io/version": "v1.15.3"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "3",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app\":\"cert-manager\",\"app.kubernetes.io/component\":\"controller\",\"app.kubernetes.io/instance\":\"cert-manager\",\"app.kubernetes.io/name\":\"cert-manager\",\"app.kubernetes.io/version\":\"v1.15.3\"},\"name\":\"cert-manager\",\"namespace\":\"cert-manager\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/component\":\"controller\",\"app.kubernetes.io/instance\":\"cert-manager\",\"app.kubernetes.io/name\":\"cert-manager\"}},\"template\":{\"metadata\":{\"annotations\":{\"prometheus.io/path\":\"/metrics\",\"prometheus.io/port\":\"9402\",\"prometheus.io/scrape\":\"true\"},\"labels\":{\"app\":\"cert-manager\",\"app.kubernetes.io/component\":\"controller\",\"app.kubernetes.io/instance\":\"cert-manager\",\"app.kubernetes.io/name\":\"cert-manager\",\"app.kubernetes.io/version\":\"v1.15.3\"}},\"spec\":{\"containers\":[{\"args\":[\"--v=2\",\"--cluster-resource-namespace=$(POD_NAMESPACE)\",\"--leader-election-namespace=kube-system\",\"--acme-http01-solver-image=quay.io/jetstack/cert-manager-acmesolver:v1.15.3\",\"--max-concurrent-challenges=60\"],\"env\":[{\"name\":\"POD_NAMESPACE\",\"valueFrom\":{\"fieldRef\":{\"fieldPath\":\"metadata.namespace\"}}}],\"image\":\"quay.io/jetstack/cert-manager-controller:v1.15.3\",\"imagePullPolicy\":\"IfNotPresent\",\"livenessProbe\":{\"failureThreshold\":8,\"httpGet\":{\"path\":\"/livez\",\"port\":\"http-healthz\",\"scheme\":\"HTTP\"},\"initialDelaySeconds\":10,\"periodSeconds\":10,\"successThreshold\":1,\"timeoutSeconds\":15},\"name\":\"cert-manager-controller\",\"ports\":[{\"containerPort\":9402,\"name\":\"http-metrics\",\"protocol\":\"TCP\"},{\"containerPort\":9403,\"name\":\"http-healthz\",\"protocol\":\"TCP\"}],\"securityContext\":{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"drop\":[\"ALL\"]},\"readOnlyRootFilesystem\":true}}],\"enableServiceLinks\":false,\"nodeSelector\":{\"kubernetes.io/os\":\"linux\"},\"securityContext\":{\"runAsNonRoot\":true,\"seccompProfile\":{\"type\":\"RuntimeDefault\"}},\"serviceAccountName\":\"cert-manager\"}}}}\n"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/cert-manager/cert-manager-cainjector",
+    "name": "cert-manager-cainjector",
+    "namespace": "cert-manager",
+    "kind": "deployment",
+    "policy": "nil policy",
+    "images": [
+      "quay.io/jetstack/cert-manager-cainjector:v1.15.3"
+    ],
+    "labels": {
+      "app": "cainjector",
+      "app.kubernetes.io/component": "cainjector",
+      "app.kubernetes.io/instance": "cert-manager",
+      "app.kubernetes.io/name": "cainjector",
+      "app.kubernetes.io/version": "v1.15.3"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "2",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app\":\"cainjector\",\"app.kubernetes.io/component\":\"cainjector\",\"app.kubernetes.io/instance\":\"cert-manager\",\"app.kubernetes.io/name\":\"cainjector\",\"app.kubernetes.io/version\":\"v1.15.3\"},\"name\":\"cert-manager-cainjector\",\"namespace\":\"cert-manager\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/component\":\"cainjector\",\"app.kubernetes.io/instance\":\"cert-manager\",\"app.kubernetes.io/name\":\"cainjector\"}},\"template\":{\"metadata\":{\"labels\":{\"app\":\"cainjector\",\"app.kubernetes.io/component\":\"cainjector\",\"app.kubernetes.io/instance\":\"cert-manager\",\"app.kubernetes.io/name\":\"cainjector\",\"app.kubernetes.io/version\":\"v1.15.3\"}},\"spec\":{\"containers\":[{\"args\":[\"--v=2\",\"--leader-election-namespace=kube-system\"],\"env\":[{\"name\":\"POD_NAMESPACE\",\"valueFrom\":{\"fieldRef\":{\"fieldPath\":\"metadata.namespace\"}}}],\"image\":\"quay.io/jetstack/cert-manager-cainjector:v1.15.3\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"cert-manager-cainjector\",\"securityContext\":{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"drop\":[\"ALL\"]},\"readOnlyRootFilesystem\":true}}],\"enableServiceLinks\":false,\"nodeSelector\":{\"kubernetes.io/os\":\"linux\"},\"securityContext\":{\"runAsNonRoot\":true,\"seccompProfile\":{\"type\":\"RuntimeDefault\"}},\"serviceAccountName\":\"cert-manager-cainjector\"}}}}\n"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/cert-manager/cert-manager-webhook",
+    "name": "cert-manager-webhook",
+    "namespace": "cert-manager",
+    "kind": "deployment",
+    "policy": "nil policy",
+    "images": [
+      "quay.io/jetstack/cert-manager-webhook:v1.15.3"
+    ],
+    "labels": {
+      "app": "webhook",
+      "app.kubernetes.io/component": "webhook",
+      "app.kubernetes.io/instance": "cert-manager",
+      "app.kubernetes.io/name": "webhook",
+      "app.kubernetes.io/version": "v1.15.3"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "2",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app\":\"webhook\",\"app.kubernetes.io/component\":\"webhook\",\"app.kubernetes.io/instance\":\"cert-manager\",\"app.kubernetes.io/name\":\"webhook\",\"app.kubernetes.io/version\":\"v1.15.3\"},\"name\":\"cert-manager-webhook\",\"namespace\":\"cert-manager\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/component\":\"webhook\",\"app.kubernetes.io/instance\":\"cert-manager\",\"app.kubernetes.io/name\":\"webhook\"}},\"template\":{\"metadata\":{\"labels\":{\"app\":\"webhook\",\"app.kubernetes.io/component\":\"webhook\",\"app.kubernetes.io/instance\":\"cert-manager\",\"app.kubernetes.io/name\":\"webhook\",\"app.kubernetes.io/version\":\"v1.15.3\"}},\"spec\":{\"containers\":[{\"args\":[\"--v=2\",\"--secure-port=10250\",\"--dynamic-serving-ca-secret-namespace=$(POD_NAMESPACE)\",\"--dynamic-serving-ca-secret-name=cert-manager-webhook-ca\",\"--dynamic-serving-dns-names=cert-manager-webhook\",\"--dynamic-serving-dns-names=cert-manager-webhook.$(POD_NAMESPACE)\",\"--dynamic-serving-dns-names=cert-manager-webhook.$(POD_NAMESPACE).svc\"],\"env\":[{\"name\":\"POD_NAMESPACE\",\"valueFrom\":{\"fieldRef\":{\"fieldPath\":\"metadata.namespace\"}}}],\"image\":\"quay.io/jetstack/cert-manager-webhook:v1.15.3\",\"imagePullPolicy\":\"IfNotPresent\",\"livenessProbe\":{\"failureThreshold\":3,\"httpGet\":{\"path\":\"/livez\",\"port\":6080,\"scheme\":\"HTTP\"},\"initialDelaySeconds\":60,\"periodSeconds\":10,\"successThreshold\":1,\"timeoutSeconds\":1},\"name\":\"cert-manager-webhook\",\"ports\":[{\"containerPort\":10250,\"name\":\"https\",\"protocol\":\"TCP\"},{\"containerPort\":6080,\"name\":\"healthcheck\",\"protocol\":\"TCP\"}],\"readinessProbe\":{\"failureThreshold\":3,\"httpGet\":{\"path\":\"/healthz\",\"port\":6080,\"scheme\":\"HTTP\"},\"initialDelaySeconds\":5,\"periodSeconds\":5,\"successThreshold\":1,\"timeoutSeconds\":1},\"securityContext\":{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"drop\":[\"ALL\"]},\"readOnlyRootFilesystem\":true}}],\"enableServiceLinks\":false,\"nodeSelector\":{\"kubernetes.io/os\":\"linux\"},\"securityContext\":{\"runAsNonRoot\":true,\"seccompProfile\":{\"type\":\"RuntimeDefault\"}},\"serviceAccountName\":\"cert-manager-webhook\"}}}}\n"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/default/nfs-client-provisioner",
+    "name": "nfs-client-provisioner",
+    "namespace": "default",
+    "kind": "deployment",
+    "policy": "nil policy",
+    "images": [
+      "rkevin/nfs-subdir-external-provisioner:fix-k8s-1.20"
+    ],
+    "labels": {
+      "app": "nfs-client-provisioner"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "4",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app\":\"nfs-client-provisioner\"},\"name\":\"nfs-client-provisioner\",\"namespace\":\"default\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app\":\"nfs-client-provisioner\"}},\"strategy\":{\"type\":\"Recreate\"},\"template\":{\"metadata\":{\"labels\":{\"app\":\"nfs-client-provisioner\"}},\"spec\":{\"containers\":[{\"env\":[{\"name\":\"PROVISIONER_NAME\",\"value\":\"nfs-share\"},{\"name\":\"NFS_SERVER\",\"value\":\"192.168.2.10\"},{\"name\":\"NFS_PATH\",\"value\":\"/srv/nfs4/mnt/vol1/docker-hosts\"}],\"image\":\"rkevin/nfs-subdir-external-provisioner:fix-k8s-1.20\",\"name\":\"nfs-client-provisioner\",\"volumeMounts\":[{\"mountPath\":\"/persistentvolumes\",\"name\":\"nfs-client-root\"}]}],\"serviceAccountName\":\"nfs-client-provisioner\",\"volumes\":[{\"name\":\"nfs-client-root\",\"nfs\":{\"path\":\"/srv/nfs4/mnt/vol1/docker-hosts\",\"server\":\"192.168.2.10\"}}]}}}}\n"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/deinemudda/deinemudda",
+    "name": "deinemudda",
+    "namespace": "deinemudda",
+    "kind": "deployment",
+    "policy": "all",
+    "images": [
+      "markusressel/deinemudda:v1.3.14"
+    ],
+    "labels": {
+      "keel.sh/policy": "all",
+      "workload.user.cattle.io/workloadselector": "deployment-deinemudda-deinemudda"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "42",
+      "keel.sh/approvals": "1",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"keel.sh/policy\":\"all\",\"workload.user.cattle.io/workloadselector\":\"deployment-deinemudda-deinemudda\"},\"name\":\"deinemudda\",\"namespace\":\"deinemudda\"},\"spec\":{\"selector\":{\"matchLabels\":{\"workload.user.cattle.io/workloadselector\":\"deployment-deinemudda-deinemudda\"}},\"template\":{\"metadata\":{\"labels\":{\"workload.user.cattle.io/workloadselector\":\"deployment-deinemudda-deinemudda\"}},\"spec\":{\"containers\":[{\"envFrom\":[{\"configMapRef\":{\"name\":\"deinemudda\",\"optional\":false}},{\"secretRef\":{\"name\":\"deinemudda\",\"optional\":false}}],\"image\":\"markusressel/deinemudda:latest\",\"name\":\"deinemudda\",\"ports\":[{\"containerPort\":8000}],\"securityContext\":{\"allowPrivilegeEscalation\":false,\"privileged\":false,\"readOnlyRootFilesystem\":false,\"runAsNonRoot\":false},\"stdin\":true,\"tty\":true,\"volumeMounts\":[{\"mountPath\":\"/mnt/data/\",\"name\":\"data\"}]}],\"imagePullSecrets\":[{\"name\":\"dh-markusressel\"}],\"volumes\":[{\"name\":\"data\",\"persistentVolumeClaim\":{\"claimName\":\"deinemudda-data\"}}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version v1.3.13 -\u003e v1.3.14 [2023-02-27T20:30:17Z]"
+    },
+    "status": {
+      "replicas": 0,
+      "updatedReplicas": 0,
+      "readyReplicas": 0,
+      "availableReplicas": 0,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/deinemudda/deinemudda-prod",
+    "name": "deinemudda-prod",
+    "namespace": "deinemudda",
+    "kind": "deployment",
+    "policy": "major",
+    "images": [
+      "markusressel/deinemudda:v1.3.14"
+    ],
+    "labels": {
+      "keel.sh/policy": "major",
+      "workload.user.cattle.io/workloadselector": "deployment-deinemudda-deinemudda-prod"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "6",
+      "keel.sh/approvals": "1",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"keel.sh/policy\":\"major\",\"workload.user.cattle.io/workloadselector\":\"deployment-deinemudda-deinemudda-prod\"},\"name\":\"deinemudda-prod\",\"namespace\":\"deinemudda\"},\"spec\":{\"selector\":{\"matchLabels\":{\"workload.user.cattle.io/workloadselector\":\"deployment-deinemudda-deinemudda-prod\"}},\"template\":{\"metadata\":{\"labels\":{\"workload.user.cattle.io/workloadselector\":\"deployment-deinemudda-deinemudda-prod\"}},\"spec\":{\"containers\":[{\"envFrom\":[{\"configMapRef\":{\"name\":\"deinemudda-prod\",\"optional\":false}},{\"secretRef\":{\"name\":\"deinemudda-prod\",\"optional\":false}}],\"image\":\"markusressel/deinemudda:v1.3.13\",\"livenessProbe\":{\"httpGet\":{\"path\":\"/\",\"port\":8000}},\"name\":\"deinemudda-prod\",\"ports\":[{\"containerPort\":8000}],\"securityContext\":{\"allowPrivilegeEscalation\":false,\"privileged\":false,\"readOnlyRootFilesystem\":false,\"runAsNonRoot\":false},\"stdin\":true,\"tty\":true}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version v1.3.13 -\u003e v1.3.14 [2023-02-25T20:37:07Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/esphome/esphome",
+    "name": "esphome",
+    "namespace": "esphome",
+    "kind": "deployment",
+    "policy": "all",
+    "images": [
+      "esphome/esphome:2024.10.0-dev20240927"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "deployment-esphome-esphome"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "112",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "all",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubernetes.io/change-cause": "keel automated update, version 2024.10.0-dev20240916 -\u003e 2024.10.0-dev20240927 [2024-09-27T21:37:06Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/foldingathome/folding-at-home",
+    "name": "folding-at-home",
+    "namespace": "foldingathome",
+    "kind": "deployment",
+    "policy": "force",
+    "images": [
+      "yurinnick/folding-at-home:latest"
+    ],
+    "labels": {
+      "workload.user.cattle.io/workloadselector": "deployment-foldingathome-folding-at-home"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "6",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll"
+    },
+    "status": {
+      "replicas": 0,
+      "updatedReplicas": 0,
+      "readyReplicas": 0,
+      "availableReplicas": 0,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/gameservers/satisfactory",
+    "name": "satisfactory",
+    "namespace": "gameservers",
+    "kind": "deployment",
+    "policy": "all",
+    "images": [
+      "ghcr.io/ekeih/satisfactory-bot/server-public:2024.09.25-15811013"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "satisfactory"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "4",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "all",
+      "keel.sh/pollSchedule": "@every 10m",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\",\"keel.sh/policy\":\"all\",\"keel.sh/pollSchedule\":\"@every 10m\",\"keel.sh/trigger\":\"poll\"},\"labels\":{\"app.kubernetes.io/name\":\"satisfactory\"},\"name\":\"satisfactory\",\"namespace\":\"gameservers\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"satisfactory\"}},\"strategy\":{\"type\":\"Recreate\"},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"satisfactory\"},\"name\":\"satisfactory\"},\"spec\":{\"containers\":[{\"args\":[\"-c\",\"mkdir -p /home/steam/.config/Epic/FactoryGame;      ln -sf /home/steam/savegames /home/steam/.config/Epic/FactoryGame/Saved       ; ln -sf /home/steam/data /home/steam/Steam/SatisfactoryDedicatedServer/FactoryGame/Saved       ; /home/steam/Steam/SatisfactoryDedicatedServer/FactoryServer.sh -ini:Engine:[HTTPServer.Listeners]:DefaultBindAddress=any\"],\"command\":[\"/bin/sh\"],\"image\":\"ghcr.io/ekeih/satisfactory-bot/server-public:2024.09.25-15811013\",\"name\":\"satisfactory\",\"ports\":[{\"containerPort\":7777,\"name\":\"7777u\",\"protocol\":\"UDP\"},{\"containerPort\":7777,\"name\":\"7777t\",\"protocol\":\"TCP\"}],\"securityContext\":{\"allowPrivilegeEscalation\":false,\"privileged\":false,\"readOnlyRootFilesystem\":false,\"runAsNonRoot\":false},\"stdin\":true,\"tty\":true,\"volumeMounts\":[{\"mountPath\":\"/home/steam/savegames\",\"name\":\"data\",\"subPath\":\"savegames\"},{\"mountPath\":\"/home/steam/data\",\"name\":\"data\",\"subPath\":\"config\"}]}],\"hostNetwork\":false,\"nodeName\":\"kfc\",\"securityContext\":{\"fsGroup\":1000,\"runAsGroup\":1000,\"runAsNonRoot\":true,\"runAsUser\":1000},\"volumes\":[{\"name\":\"data\",\"persistentVolumeClaim\":{\"claimName\":\"satisfactory-data\"}}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version 2024.09.12-15677691 -\u003e 2024.09.19-15747428 [2024-09-23T01:31:11Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/gameservers/valheim",
+    "name": "valheim",
+    "namespace": "gameservers",
+    "kind": "deployment",
+    "policy": "force",
+    "images": [
+      "ghcr.io/lloesche/valheim-server:latest"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "valheim",
+      "workload.user.cattle.io/workloadselector": "deployment-valheim"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "3",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\",\"keel.sh/policy\":\"force\",\"keel.sh/pollSchedule\":\"@every 24h\",\"keel.sh/trigger\":\"poll\"},\"labels\":{\"app.kubernetes.io/name\":\"valheim\",\"workload.user.cattle.io/workloadselector\":\"deployment-valheim\"},\"name\":\"valheim\",\"namespace\":\"gameservers\"},\"spec\":{\"selector\":{\"matchLabels\":{\"workload.user.cattle.io/workloadselector\":\"deployment-valheim\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"valheim\",\"workload.user.cattle.io/workloadselector\":\"deployment-valheim\"},\"name\":\"valheim\"},\"spec\":{\"containers\":[{\"envFrom\":[{\"configMapRef\":{\"name\":\"valheim-config\"}},{\"secretRef\":{\"name\":\"valheim-config-secrets\"}}],\"image\":\"ghcr.io/lloesche/valheim-server\",\"name\":\"valheim\",\"ports\":[{\"containerPort\":2456,\"protocol\":\"UDP\"},{\"containerPort\":2457,\"protocol\":\"UDP\"}],\"securityContext\":{\"allowPrivilegeEscalation\":true,\"privileged\":true,\"readOnlyRootFilesystem\":false,\"runAsNonRoot\":false},\"stdin\":true,\"tty\":true,\"volumeMounts\":[{\"mountPath\":\"/config\",\"name\":\"data\",\"subPath\":\"config\"},{\"mountPath\":\"/opt/valheim\",\"name\":\"data\",\"subPath\":\"data\"}]}],\"nodeName\":\"kfc\",\"securityContext\":{\"runAsNonRoot\":true},\"volumes\":[{\"name\":\"data\",\"persistentVolumeClaim\":{\"claimName\":\"valheim-data\"}}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version latest -\u003e latest [2024-05-20T22:53:30Z]"
+    },
+    "status": {
+      "replicas": 0,
+      "updatedReplicas": 0,
+      "readyReplicas": 0,
+      "availableReplicas": 0,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/gitea/gitea-gitea",
+    "name": "gitea-gitea",
+    "namespace": "gitea",
+    "kind": "deployment",
+    "policy": "major",
+    "images": [
+      "codeberg.org/forgejo/forgejo:1.21.11-0",
+      "library/memcached:1.6.31"
+    ],
+    "labels": {
+      "app": "gitea-gitea"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "85",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "major",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\",\"keel.sh/policy\":\"major\",\"keel.sh/pollSchedule\":\"@every 24h\",\"keel.sh/trigger\":\"poll\"},\"labels\":{\"app\":\"gitea-gitea\"},\"name\":\"gitea-gitea\",\"namespace\":\"gitea\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app\":\"gitea-gitea\"}},\"strategy\":{\"type\":\"Recreate\"},\"template\":{\"metadata\":{\"labels\":{\"app\":\"gitea-gitea\"}},\"spec\":{\"containers\":[{\"env\":[{\"name\":\"POSTGRES_PASSWORD\",\"valueFrom\":{\"secretKeyRef\":{\"key\":\"dbPassword\",\"name\":\"gitea-db\"}}}],\"image\":\"codeberg.org/forgejo/forgejo:1.21.10-0\",\"livenessProbe\":{\"failureThreshold\":100,\"httpGet\":{\"port\":\"http\"},\"initialDelaySeconds\":10,\"periodSeconds\":10,\"successThreshold\":1,\"timeoutSeconds\":1},\"name\":\"gitea\",\"ports\":[{\"containerPort\":22,\"name\":\"ssh\",\"protocol\":\"TCP\"},{\"containerPort\":3000,\"name\":\"http\",\"protocol\":\"TCP\"}],\"readinessProbe\":{\"failureThreshold\":100,\"httpGet\":{\"port\":\"http\"},\"initialDelaySeconds\":5,\"periodSeconds\":10,\"successThreshold\":1,\"timeoutSeconds\":1},\"volumeMounts\":[{\"mountPath\":\"/etc/gitea\",\"name\":\"gitea-config\",\"subPath\":\"app.ini\"},{\"mountPath\":\"/data\",\"name\":\"gitea-data\",\"subPath\":\"data\"},{\"mountPath\":\"/app/gitea/data/lfs\",\"name\":\"gitea-data\",\"subPath\":\"app/gitea/data/lfs\"}]},{\"command\":[\"memcached\",\"-m 64\",\"-o\",\"modern\",\"-v\"],\"image\":\"library/memcached:1.6.26\",\"livenessProbe\":{\"failureThreshold\":3,\"initialDelaySeconds\":30,\"periodSeconds\":10,\"successThreshold\":1,\"tcpSocket\":{\"port\":\"memcache\"},\"timeoutSeconds\":5},\"name\":\"memcached\",\"ports\":[{\"containerPort\":11211,\"name\":\"memcache\",\"protocol\":\"TCP\"}],\"readinessProbe\":{\"failureThreshold\":3,\"initialDelaySeconds\":5,\"periodSeconds\":10,\"successThreshold\":1,\"tcpSocket\":{\"port\":\"memcache\"},\"timeoutSeconds\":1},\"resources\":{\"requests\":{\"cpu\":\"50m\",\"memory\":\"64Mi\"}},\"securityContext\":{\"runAsUser\":1000}}],\"initContainers\":[{\"command\":[\"/bin/sh\",\"-c\",\"mkdir -p /datatmp/gitea/conf\\n#if [ ! -f /datatmp/gitea/conf/app.ini ]; then\\n  sed \\\"s/POSTGRES_PASSWORD/${POSTGRES_PASSWORD}/g\\\" \\u003c /etc/gitea/app.ini \\u003e /datatmp/gitea/conf/app.ini\\n#fi\"],\"env\":[{\"name\":\"SCRIPT\",\"value\":\"mkdir -p /datatmp/gitea/conf\\n#if [ ! -f /datatmp/gitea/conf/app.ini ]; then\\n  sed \\\"s/POSTGRES_PASSWORD/${POSTGRES_PASSWORD}/g\\\" \\u003c /etc/gitea/app.ini \\u003e /datatmp/gitea/conf/app.ini\\n#fi\"},{\"name\":\"POSTGRES_PASSWORD\",\"valueFrom\":{\"secretKeyRef\":{\"key\":\"dbPassword\",\"name\":\"gitea-db\"}}}],\"image\":\"codeberg.org/forgejo/forgejo:1.21.10-0\",\"name\":\"init\",\"volumeMounts\":[{\"mountPath\":\"/datatmp\",\"name\":\"gitea-data\"},{\"mountPath\":\"/etc/gitea\",\"name\":\"gitea-config\"}]},{\"args\":[\"-c\",\"echo \\\"checking postresql for existence of db: $DATABASE\\\";\\nDB_EXIST=$(psql -lqt -w | cut -d \\\\| -f 1 | grep ${DATABASE} | sed 's: ::g');\\necho \\\"db exists ${DB_EXIST}:${DATABASE}\\\";\\nif [ \\\"${DB_EXIST}\\\" != \\\"${DATABASE}\\\" ]; then\\n  psql -c \\\"CREATE DATABASE ${DATABASE}\\\";\\nelse\\n  echo \\\"existing database detected.\\\"\\nfi\"],\"command\":[\"/bin/bash\"],\"env\":[{\"name\":\"POSTGRES_INIT_SCRIPT\",\"value\":\"echo \\\"checking postresql for existence of db: $DATABASE\\\";\\nDB_EXIST=$(psql -lqt -w | cut -d \\\\| -f 1 | grep ${DATABASE} | sed 's: ::g');\\necho \\\"db exists ${DB_EXIST}:${DATABASE}\\\";\\nif [ \\\"${DB_EXIST}\\\" != \\\"${DATABASE}\\\" ]; then\\n  psql -c \\\"CREATE DATABASE ${DATABASE}\\\";\\nelse\\n  echo \\\"existing database detected.\\\"\\nfi\"},{\"name\":\"PGHOST\",\"valueFrom\":{\"secretKeyRef\":{\"key\":\"dbHost\",\"name\":\"gitea-db\"}}},{\"name\":\"PGPORT\",\"valueFrom\":{\"secretKeyRef\":{\"key\":\"dbPort\",\"name\":\"gitea-db\"}}},{\"name\":\"DATABASE\",\"valueFrom\":{\"secretKeyRef\":{\"key\":\"dbDatabase\",\"name\":\"gitea-db\"}}},{\"name\":\"PGUSER\",\"valueFrom\":{\"secretKeyRef\":{\"key\":\"dbUser\",\"name\":\"gitea-db\"}}},{\"name\":\"PGPASSWORD\",\"valueFrom\":{\"secretKeyRef\":{\"key\":\"dbPassword\",\"name\":\"gitea-db\"}}}],\"image\":\"postgres:11\",\"name\":\"init-postgres\"}],\"nodeName\":\"kfc\",\"nodeSelector\":{\"kubernetes.io/hostname\":\"kfc\"},\"volumes\":[{\"configMap\":{\"defaultMode\":420,\"items\":[{\"key\":\"app.ini\",\"path\":\"app.ini\"}],\"name\":\"gitea-gitea\",\"optional\":false},\"name\":\"gitea-config\"},{\"name\":\"gitea-data\",\"persistentVolumeClaim\":{\"claimName\":\"gitea-data\"}}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version 1.6.29 -\u003e 1.6.31 [2024-09-16T17:27:31Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/grafana/grafana",
+    "name": "grafana",
+    "namespace": "grafana",
+    "kind": "deployment",
+    "policy": "all",
+    "images": [
+      "grafana/grafana:11.2.1",
+      "grafana/grafana-image-renderer:latest"
+    ],
+    "labels": {
+      "workload.user.cattle.io/workloadselector": "deployment-grafana-grafana"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "110",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "all",
+      "keel.sh/pollSchedule": "@every 1m",
+      "keel.sh/trigger": "poll",
+      "kubernetes.io/change-cause": "keel automated update, version 11.2.0 -\u003e 11.2.1 [2024-09-26T19:38:47Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/homeassistant/appdaemon",
+    "name": "appdaemon",
+    "namespace": "homeassistant",
+    "kind": "deployment",
+    "policy": "nil policy",
+    "images": [
+      "acockburn/appdaemon:dev"
+    ],
+    "labels": {},
+    "annotations": {
+      "deployment.kubernetes.io/revision": "3",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"name\":\"appdaemon\",\"namespace\":\"homeassistant\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"appdaemon\"}},\"strategy\":{\"type\":\"Recreate\"},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"appdaemon\"}},\"spec\":{\"containers\":[{\"envFrom\":[{\"configMapRef\":{\"name\":\"appdaemon\"}},{\"secretRef\":{\"name\":\"appdaemon\"}}],\"image\":\"acockburn/appdaemon:dev\",\"livenessProbe\":{\"httpGet\":{\"path\":\"/\",\"port\":5050}},\"name\":\"appdaemon\",\"ports\":[{\"containerPort\":5050}],\"volumeMounts\":[{\"mountPath\":\"/conf\",\"name\":\"config\"},{\"mountPath\":\"/certs\",\"name\":\"config\"}]}],\"nodeSelector\":{\"kubernetes.io/hostname\":\"kfc\"},\"volumes\":[{\"name\":\"config\",\"persistentVolumeClaim\":{\"claimName\":\"appdaemon-config\"}}]}}}}\n"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/homeassistant/home-assistant",
+    "name": "home-assistant",
+    "namespace": "homeassistant",
+    "kind": "deployment",
+    "policy": "all",
+    "images": [
+      "ghcr.io/home-assistant/home-assistant:2024.9.3",
+      "rhasspy/wyoming-whisper",
+      "rhasspy/wyoming-piper",
+      "rhasspy/wyoming-openwakeword"
+    ],
+    "labels": {},
+    "annotations": {
+      "deployment.kubernetes.io/revision": "41",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "all",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\",\"keel.sh/policy\":\"all\",\"keel.sh/pollSchedule\":\"@every 24h\",\"keel.sh/trigger\":\"poll\"},\"name\":\"home-assistant\",\"namespace\":\"homeassistant\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"home-assistant\"}},\"strategy\":{\"type\":\"Recreate\"},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"home-assistant\"}},\"spec\":{\"containers\":[{\"args\":[\"-c\",\"pip install sunix-ledstrip-controller-client==2.0.5 \\u0026\\u0026 /init\"],\"command\":[\"/bin/sh\"],\"image\":\"ghcr.io/home-assistant/home-assistant:2024.4.2\",\"imagePullPolicy\":\"Always\",\"name\":\"home-assistant\",\"ports\":[{\"containerPort\":8123,\"name\":\"http\",\"protocol\":\"TCP\"}],\"volumeMounts\":[{\"mountPath\":\"/config\",\"name\":\"config\"}]},{\"args\":[\"--model\",\"small-int8\",\"--language\",\"en\"],\"image\":\"rhasspy/wyoming-whisper\",\"name\":\"whisper\",\"ports\":[{\"containerPort\":10300}],\"volumeMounts\":[{\"mountPath\":\"/data\",\"name\":\"whisper-data\"}]},{\"args\":[\"--voice\",\"en_US-lessac-medium\"],\"image\":\"rhasspy/wyoming-piper\",\"name\":\"piper\",\"ports\":[{\"containerPort\":10200}],\"volumeMounts\":[{\"mountPath\":\"/data\",\"name\":\"piper-data\"}]},{\"args\":[\"--preload-model\",\"ok_nabu\"],\"image\":\"rhasspy/wyoming-openwakeword\",\"name\":\"openwakeword\",\"ports\":[{\"containerPort\":10400}]}],\"hostNetwork\":true,\"nodeSelector\":{\"kubernetes.io/hostname\":\"kfc\"},\"volumes\":[{\"name\":\"config\",\"persistentVolumeClaim\":{\"claimName\":\"conf\"}},{\"name\":\"whisper-data\",\"persistentVolumeClaim\":{\"claimName\":\"whisper-data\"}},{\"name\":\"piper-data\",\"persistentVolumeClaim\":{\"claimName\":\"piper-data\"}},{\"name\":\"ollama-data\",\"persistentVolumeClaim\":{\"claimName\":\"ollama-data\"}}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version 2024.9.2 -\u003e 2024.9.3 [2024-09-25T19:38:11Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/icantbelieveitsnotvaletudo/mapgenerator",
+    "name": "mapgenerator",
+    "namespace": "icantbelieveitsnotvaletudo",
+    "kind": "deployment",
+    "policy": "force",
+    "images": [
+      "markusressel/icantbelieveitsnotvaletudo:latest"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "icantbelieveitsnotvaletudo"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "3",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/infinitewisdom/infinitewisdom-prod",
+    "name": "infinitewisdom-prod",
+    "namespace": "infinitewisdom",
+    "kind": "deployment",
+    "policy": "all",
+    "images": [
+      "ghcr.io/ekeih/infinitewisdom:4.6.13"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "infinitewisdom-prod"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "12",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "all",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/ingress-nginx/ingress-nginx-controller",
+    "name": "ingress-nginx-controller",
+    "namespace": "ingress-nginx",
+    "kind": "deployment",
+    "policy": "nil policy",
+    "images": [
+      "registry.k8s.io/ingress-nginx/controller:v1.11.2@sha256:d5f8217feeac4887cb1ed21f27c2674e58be06bd8f5184cacea2a69abaf78dce"
+    ],
+    "labels": {
+      "app.kubernetes.io/component": "controller",
+      "app.kubernetes.io/instance": "ingress-nginx",
+      "app.kubernetes.io/managed-by": "Helm",
+      "app.kubernetes.io/name": "ingress-nginx",
+      "app.kubernetes.io/part-of": "ingress-nginx",
+      "app.kubernetes.io/version": "1.11.2",
+      "helm.sh/chart": "ingress-nginx-4.11.2"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "1",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/component\":\"controller\",\"app.kubernetes.io/instance\":\"ingress-nginx\",\"app.kubernetes.io/managed-by\":\"Helm\",\"app.kubernetes.io/name\":\"ingress-nginx\",\"app.kubernetes.io/part-of\":\"ingress-nginx\",\"app.kubernetes.io/version\":\"1.11.2\",\"helm.sh/chart\":\"ingress-nginx-4.11.2\"},\"name\":\"ingress-nginx-controller\",\"namespace\":\"ingress-nginx\"},\"spec\":{\"minReadySeconds\":0,\"replicas\":1,\"revisionHistoryLimit\":10,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/component\":\"controller\",\"app.kubernetes.io/instance\":\"ingress-nginx\",\"app.kubernetes.io/name\":\"ingress-nginx\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/component\":\"controller\",\"app.kubernetes.io/instance\":\"ingress-nginx\",\"app.kubernetes.io/managed-by\":\"Helm\",\"app.kubernetes.io/name\":\"ingress-nginx\",\"app.kubernetes.io/part-of\":\"ingress-nginx\",\"app.kubernetes.io/version\":\"1.11.2\",\"helm.sh/chart\":\"ingress-nginx-4.11.2\"}},\"spec\":{\"containers\":[{\"args\":[\"/nginx-ingress-controller\",\"--publish-service=$(POD_NAMESPACE)/ingress-nginx-controller\",\"--election-id=ingress-nginx-leader\",\"--controller-class=k8s.io/ingress-nginx\",\"--ingress-class=nginx\",\"--configmap=$(POD_NAMESPACE)/ingress-nginx-controller\",\"--validating-webhook=:8443\",\"--validating-webhook-certificate=/usr/local/certificates/cert\",\"--validating-webhook-key=/usr/local/certificates/key\",\"--enable-metrics=false\"],\"env\":[{\"name\":\"POD_NAME\",\"valueFrom\":{\"fieldRef\":{\"fieldPath\":\"metadata.name\"}}},{\"name\":\"POD_NAMESPACE\",\"valueFrom\":{\"fieldRef\":{\"fieldPath\":\"metadata.namespace\"}}},{\"name\":\"LD_PRELOAD\",\"value\":\"/usr/local/lib/libmimalloc.so\"}],\"image\":\"registry.k8s.io/ingress-nginx/controller:v1.11.2@sha256:d5f8217feeac4887cb1ed21f27c2674e58be06bd8f5184cacea2a69abaf78dce\",\"imagePullPolicy\":\"IfNotPresent\",\"lifecycle\":{\"preStop\":{\"exec\":{\"command\":[\"/wait-shutdown\"]}}},\"livenessProbe\":{\"failureThreshold\":5,\"httpGet\":{\"path\":\"/healthz\",\"port\":10254,\"scheme\":\"HTTP\"},\"initialDelaySeconds\":10,\"periodSeconds\":10,\"successThreshold\":1,\"timeoutSeconds\":1},\"name\":\"controller\",\"ports\":[{\"containerPort\":80,\"name\":\"http\",\"protocol\":\"TCP\"},{\"containerPort\":443,\"name\":\"https\",\"protocol\":\"TCP\"},{\"containerPort\":8443,\"name\":\"webhook\",\"protocol\":\"TCP\"}],\"readinessProbe\":{\"failureThreshold\":3,\"httpGet\":{\"path\":\"/healthz\",\"port\":10254,\"scheme\":\"HTTP\"},\"initialDelaySeconds\":10,\"periodSeconds\":10,\"successThreshold\":1,\"timeoutSeconds\":1},\"resources\":{\"requests\":{\"cpu\":\"100m\",\"memory\":\"90Mi\"}},\"securityContext\":{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"add\":[\"NET_BIND_SERVICE\"],\"drop\":[\"ALL\"]},\"readOnlyRootFilesystem\":false,\"runAsNonRoot\":true,\"runAsUser\":101,\"seccompProfile\":{\"type\":\"RuntimeDefault\"}},\"volumeMounts\":[{\"mountPath\":\"/usr/local/certificates/\",\"name\":\"webhook-cert\",\"readOnly\":true}]}],\"dnsPolicy\":\"ClusterFirst\",\"nodeSelector\":{\"kubernetes.io/os\":\"linux\"},\"serviceAccountName\":\"ingress-nginx\",\"terminationGracePeriodSeconds\":300,\"volumes\":[{\"name\":\"webhook-cert\",\"secret\":{\"secretName\":\"ingress-nginx-admission\"}}]}}}}\n"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/keel/keel",
+    "name": "keel",
+    "namespace": "keel",
+    "kind": "deployment",
+    "policy": "all",
+    "images": [
+      "ghcr.io/markusressel/keel:latest",
+      "webhookrelay/webhookrelayd:latest",
+      "ghcr.io/markusressel/keel-telegram-bot:latest"
+    ],
+    "labels": {
+      "app": "keel"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "36",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "all",
+      "keel.sh/pollSchedule": "@every 1h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\",\"keel.sh/policy\":\"all\",\"keel.sh/pollSchedule\":\"@every 1h\",\"keel.sh/trigger\":\"poll\"},\"labels\":{\"app\":\"keel\"},\"name\":\"keel\",\"namespace\":\"keel\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app\":\"keel\"}},\"strategy\":{\"type\":\"Recreate\"},\"template\":{\"metadata\":{\"labels\":{\"app\":\"keel\"}},\"spec\":{\"containers\":[{\"command\":[\"/bin/keel\"],\"env\":[{\"name\":\"NAMESPACE\",\"valueFrom\":{\"fieldRef\":{\"fieldPath\":\"metadata.namespace\"}}},{\"name\":\"PROJECT_ID\",\"value\":\"\"},{\"name\":\"PUBSUB\",\"value\":\"\"},{\"name\":\"AUTHENTICATED_WEBHOOKS\",\"value\":\"false\"},{\"name\":\"AWS_ACCESS_KEY_ID\",\"value\":\"\"},{\"name\":\"AWS_SECRET_ACCESS_KEY\",\"value\":\"\"},{\"name\":\"AWS_REGION\",\"value\":\"\"},{\"name\":\"WEBHOOK_ENDPOINT\",\"value\":\"http://localhost:5000/\"},{\"name\":\"WEBHOOK_ENDPOINT2\",\"value\":\"http://192.168.2.91:5000/\"},{\"name\":\"MATTERMOST_ENDPOINT\",\"value\":\"\"},{\"name\":\"TEAMS_WEBHOOK_URL\",\"value\":\"\"},{\"name\":\"SLACK_TOKEN\",\"value\":\"\"},{\"name\":\"SLACK_CHANNELS\",\"value\":\"general\"},{\"name\":\"SLACK_APPROVALS_CHANNEL\",\"value\":\"general\"},{\"name\":\"SLACK_BOT_NAME\",\"value\":\"keel\"},{\"name\":\"HIPCHAT_TOKEN\",\"value\":\"\"},{\"name\":\"HIPCHAT_CHANNELS\",\"value\":\"\"},{\"name\":\"HIPCHAT_APPROVALS_CHANNEL\",\"value\":\"\"},{\"name\":\"HIPCHAT_APPROVALS_BOT_NAME\",\"value\":\"\"},{\"name\":\"HIPCHAT_APPROVALS_USER_NAME\",\"value\":\"\"},{\"name\":\"HIPCHAT_APPROVALS_PASSWORT\",\"value\":\"\"},{\"name\":\"NOTIFICATION_LEVEL\",\"value\":\"info\"},{\"name\":\"INSECURE_REGISTRY\",\"value\":\"true\"}],\"envFrom\":[{\"secretRef\":{\"name\":\"keel\"}}],\"image\":\"ghcr.io/markusressel/keel:latest\",\"imagePullPolicy\":\"Always\",\"livenessProbe\":{\"httpGet\":{\"path\":\"/healthz\",\"port\":9300},\"initialDelaySeconds\":30,\"timeoutSeconds\":10},\"name\":\"keel\",\"ports\":[{\"containerPort\":9300},{\"containerPort\":8000,\"name\":\"stats\",\"protocol\":\"TCP\"}],\"resources\":{\"limits\":{\"cpu\":\"100m\",\"memory\":\"128Mi\"}}},{\"command\":[\"/relayd\"],\"env\":[{\"name\":\"BUCKET\",\"value\":\"keel\"},{\"name\":\"KEY\",\"valueFrom\":{\"secretKeyRef\":{\"key\":\"key\",\"name\":\"keel-webhookrelay\",\"optional\":false}}},{\"name\":\"SECRET\",\"valueFrom\":{\"secretKeyRef\":{\"key\":\"secret\",\"name\":\"keel-webhookrelay\",\"optional\":false}}}],\"image\":\"webhookrelay/webhookrelayd:latest\",\"name\":\"webhookrelayd\",\"resources\":{\"limits\":{\"cpu\":\"100m\",\"memory\":\"128Mi\"},\"requests\":{\"cpu\":\"50m\",\"memory\":\"64Mi\"}},\"terminationMessagePath\":\"/dev/termination-log\",\"terminationMessagePolicy\":\"File\"},{\"envFrom\":[{\"secretRef\":{\"name\":\"keel-telegram-bot\",\"optional\":false}}],\"image\":\"ghcr.io/markusressel/keel-telegram-bot:latest\",\"imagePullPolicy\":\"Always\",\"name\":\"telegram-bot\",\"securityContext\":{\"allowPrivilegeEscalation\":false,\"privileged\":false,\"readOnlyRootFilesystem\":false,\"runAsNonRoot\":false},\"volumeMounts\":[{\"mountPath\":\"/app/keel-telegram-bot.yml\",\"name\":\"config\",\"subPath\":\"keel-telegram-bot.yml\"}]}],\"serviceAccount\":\"keel\",\"serviceAccountName\":\"keel\",\"terminationGracePeriodSeconds\":30,\"volumes\":[{\"configMap\":{\"defaultMode\":256,\"items\":[{\"key\":\"config\",\"path\":\"keel-telegram-bot.yml\"}],\"name\":\"keel-telegram-bot\",\"optional\":false},\"name\":\"config\"}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version latest -\u003e latest [2024-09-26T23:02:43Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/kube-system/coredns",
+    "name": "coredns",
+    "namespace": "kube-system",
+    "kind": "deployment",
+    "policy": "nil policy",
+    "images": [
+      "rancher/mirrored-coredns-coredns:1.10.1"
+    ],
+    "labels": {
+      "k8s-app": "kube-dns",
+      "kubernetes.io/name": "CoreDNS",
+      "objectset.rio.cattle.io/hash": "bce283298811743a0386ab510f2f67ef74240c57"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "31",
+      "keel.sh/approvals": "1",
+      "keel.sh/pollSchedule": "@every 60m",
+      "objectset.rio.cattle.io/applied": "H4sIAAAAAAAA/6xVQW/bOBP9Kx/mLMVW0jaugO/QtbPboq3XqJNeCqOgqZHFNcXhkiMnRqD/vhjJduw2TdrFniyTb4ZvHucN70F58xlDNOQgB+V9HGwySGBtXAE5TNBb2tboGBKokVWhWEF+D8o5YsWGXJS/tPwLNUfks2DoTCtmi2eGBkaSQPLDfbp1GNLVZg05rC/i0c4mS/733rji/2+KgtyzKZyqEXLQFLBw8afg0SstMetmiWncRsYa2gSsWqLtilqPYqq830P6vPIZHDJGybY7dkwBJ9P5E8dWKlaQw1Lj+eji/PVolGWXLy7U8GL0Si1fZsPyvHx1ieXli/MXQ/3yUoh8V9ITpKNHLZQDbozc5VsTmcL2g6kNQz5MIKJFzRQEVCvW1YenymwlJQfFuNp2acla41Y3vlCMfYq7G6c2yli1tAh51ibAWy/MPp1gZR1rb/dxRy30pNDtUVGaHCvjMETIv9yDCiv5gFSTKyGBAbIe7FQayE2UxiIsEjC1WgmjoJyuMAxqE4LA0h14/5tnZ9nwTLq+i5g11s7IGr2FHN6VU+JZwNhbwJoNOoxxFmjZFVQqY5uA11XAWJEtIL9IoGL2fyDLvlcs9z6oUFmuIAFPgSEfDUdyKbrC7o7fXl/PRCrjDBtlJ2jVdo6aXBEhfzVMwGMwVByWMglutMYYj07OEmBTIzX8AHysj4RCL+VB2VnH6uXFAb1DBmLSZCGHm4kwfCYkZe1Pw67Hj4a9zo4Ca+RgdHwkcJFAQFWYfyW5RG4fFM9G2c8q/r3g57+gd8BITdDYtbYVB8a+9WsK0lLZ5fCjgQ74d4Ox39W+ka3hsO4G7Q7aI8UKqJtgeDsmx3jXlamspdtZMBtjcYVXUSvbzWPIS2UjJqCVV0tjDZueiioKsc306vrrb++mk6/zq0+f342vxClFIC97ylpYtL3ofzq7/UTEvxuLu0GTc2iwTWBDtqnxIzVu10e1fM52uh/ZEY66z5VmlfaR8HDCPuePcwx0E5nqo1Td//SZjAtpnsLFg5MnWKrGiokdFTg/moenI50i5GCNa+7kjnww1AlvVYzTnkCvRqptExlDqoNho5UFuaawMRrfaC3FTL81HpPFsH80v9zDGoXYeBffPXSxKyEB8oIUfnB1Z6RJRCMsS9QMOUxprissGiuV92mkqjSQxbPTesR5gWzqrXL4n2auldT/eMqFVOvJ0mo793I1Y3Lyoph9y3TTf/7Lr1Kt7uZrvO3NtzvgfcfylFtFkbt+SeC2QnfjomITS9M/VzChKfGhUGHb99FhLJZm9VF5IWIY65Pr2r8wyX7SHFZEyB40pQLfkihxQD0syXHfDOX2B0bZjc4HNqdx6cEb5KWtlD149CmztIu2bdt/AgAA//+BDg8J/AkAAA",
+      "objectset.rio.cattle.io/id": "",
+      "objectset.rio.cattle.io/owner-gvk": "k3s.cattle.io/v1, Kind=Addon",
+      "objectset.rio.cattle.io/owner-name": "coredns",
+      "objectset.rio.cattle.io/owner-namespace": "kube-system"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/lancache/lancache",
+    "name": "lancache",
+    "namespace": "lancache",
+    "kind": "deployment",
+    "policy": "force",
+    "images": [
+      "lancachenet/monolithic:latest",
+      "lancachenet/sniproxy",
+      "lancachenet/lancache-dns:latest"
+    ],
+    "labels": {
+      "workload.user.cattle.io/workloadselector": "deployment-lancache-lancache"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "21",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubernetes.io/change-cause": "keel automated update, version latest -\u003e latest [2024-09-10T17:09:20Z]"
+    },
+    "status": {
+      "replicas": 0,
+      "updatedReplicas": 0,
+      "readyReplicas": 0,
+      "availableReplicas": 0,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/local-path-storage/local-path-provisioner",
+    "name": "local-path-provisioner",
+    "namespace": "local-path-storage",
+    "kind": "deployment",
+    "policy": "major",
+    "images": [
+      "rancher/local-path-provisioner:v0.0.24"
+    ],
+    "labels": {},
+    "annotations": {
+      "deployment.kubernetes.io/revision": "3",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "major",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubernetes.io/change-cause": "keel automated update, version v0.0.20 -\u003e v0.0.24 [2023-05-09T21:03:41Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/loki/loki-gateway",
+    "name": "loki-gateway",
+    "namespace": "loki",
+    "kind": "deployment",
+    "policy": "nil policy",
+    "images": [
+      "docker.io/nginxinc/nginx-unprivileged:1.24-alpine"
+    ],
+    "labels": {
+      "app.kubernetes.io/component": "gateway",
+      "app.kubernetes.io/instance": "loki",
+      "app.kubernetes.io/managed-by": "Helm",
+      "app.kubernetes.io/name": "loki",
+      "app.kubernetes.io/version": "3.0.0",
+      "helm.sh/chart": "loki-6.4.2"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "1",
+      "meta.helm.sh/release-name": "loki",
+      "meta.helm.sh/release-namespace": "loki"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/metallb-system/controller",
+    "name": "controller",
+    "namespace": "metallb-system",
+    "kind": "deployment",
+    "policy": "nil policy",
+    "images": [
+      "quay.io/metallb/controller:v0.14.5"
+    ],
+    "labels": {
+      "app": "metallb",
+      "component": "controller"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "12",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app\":\"metallb\",\"component\":\"controller\"},\"name\":\"controller\",\"namespace\":\"metallb-system\"},\"spec\":{\"revisionHistoryLimit\":3,\"selector\":{\"matchLabels\":{\"app\":\"metallb\",\"component\":\"controller\"}},\"template\":{\"metadata\":{\"annotations\":{\"prometheus.io/port\":\"7472\",\"prometheus.io/scrape\":\"true\"},\"labels\":{\"app\":\"metallb\",\"component\":\"controller\"}},\"spec\":{\"containers\":[{\"args\":[\"--port=7472\",\"--log-level=info\",\"--tls-min-version=VersionTLS12\"],\"env\":[{\"name\":\"METALLB_ML_SECRET_NAME\",\"value\":\"memberlist\"},{\"name\":\"METALLB_DEPLOYMENT\",\"value\":\"controller\"}],\"image\":\"quay.io/metallb/controller:v0.14.5\",\"livenessProbe\":{\"failureThreshold\":3,\"httpGet\":{\"path\":\"/metrics\",\"port\":\"monitoring\"},\"initialDelaySeconds\":10,\"periodSeconds\":10,\"successThreshold\":1,\"timeoutSeconds\":1},\"name\":\"controller\",\"ports\":[{\"containerPort\":7472,\"name\":\"monitoring\"},{\"containerPort\":9443,\"name\":\"webhook-server\",\"protocol\":\"TCP\"}],\"readinessProbe\":{\"failureThreshold\":3,\"httpGet\":{\"path\":\"/metrics\",\"port\":\"monitoring\"},\"initialDelaySeconds\":10,\"periodSeconds\":10,\"successThreshold\":1,\"timeoutSeconds\":1},\"securityContext\":{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"drop\":[\"all\"]},\"readOnlyRootFilesystem\":true},\"volumeMounts\":[{\"mountPath\":\"/tmp/k8s-webhook-server/serving-certs\",\"name\":\"cert\",\"readOnly\":true}]}],\"nodeSelector\":{\"kubernetes.io/os\":\"linux\"},\"securityContext\":{\"fsGroup\":65534,\"runAsNonRoot\":true,\"runAsUser\":65534},\"serviceAccountName\":\"controller\",\"terminationGracePeriodSeconds\":0,\"volumes\":[{\"name\":\"cert\",\"secret\":{\"defaultMode\":420,\"secretName\":\"metallb-webhook-cert\"}}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version v0.12.0 -\u003e v0.12.1 [2022-02-16T14:28:40Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/mosquitto/mqtt",
+    "name": "mqtt",
+    "namespace": "mosquitto",
+    "kind": "deployment",
+    "policy": "minor",
+    "images": [
+      "library/eclipse-mosquitto:2.0.18"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "deployment-mosquitto-mqtt",
+      "keel.sh/policy": "minor"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "19",
+      "keel.sh/approvals": "1",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\"},\"labels\":{\"app.kubernetes.io/name\":\"deployment-mosquitto-mqtt\",\"keel.sh/policy\":\"minor\",\"keel.sh/trigger\":\"poll\"},\"name\":\"mqtt\",\"namespace\":\"mosquitto\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"deployment-mosquitto-mqtt\"}},\"template\":{\"metadata\":{\"annotations\":{\"keel.sh/policy\":\"minor\"},\"labels\":{\"app.kubernetes.io/name\":\"deployment-mosquitto-mqtt\"}},\"spec\":{\"containers\":[{\"image\":\"eclipse-mosquitto:2.0.14\",\"name\":\"mqtt\",\"ports\":[{\"containerPort\":1883},{\"containerPort\":9001}],\"securityContext\":{\"allowPrivilegeEscalation\":false,\"privileged\":false,\"readOnlyRootFilesystem\":false,\"runAsNonRoot\":false},\"tty\":true,\"volumeMounts\":[{\"mountPath\":\"/mosquitto/data\",\"name\":\"data\",\"subPath\":\"data\"},{\"mountPath\":\"/mosquitto/config\",\"name\":\"data\",\"subPath\":\"config\"}]}],\"hostname\":\"mqtt\",\"nodeName\":\"kfc\",\"volumes\":[{\"name\":\"data\",\"persistentVolumeClaim\":{\"claimName\":\"mosquitto-data\"}},{\"name\":\"access\",\"secret\":{\"defaultMode\":256,\"items\":[{\"key\":\"access.acl\",\"path\":\"access.acl\"}],\"optional\":false,\"secretName\":\"mosquitto\"}},{\"configMap\":{\"defaultMode\":256,\"items\":[{\"key\":\"mosquitto.conf\",\"path\":\"mosquitto.conf\"}],\"name\":\"config\",\"optional\":false},\"name\":\"config\"},{\"name\":\"pwfile\",\"secret\":{\"defaultMode\":256,\"items\":[{\"key\":\"pwfile\",\"path\":\"pwfile\"}],\"optional\":false,\"secretName\":\"mosquitto\"}}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version 2.0.17 -\u003e 2.0.18 [2023-09-19T17:48:01Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/nginx-rtmp/nginx-rtmp",
+    "name": "nginx-rtmp",
+    "namespace": "nginx-rtmp",
+    "kind": "deployment",
+    "policy": "major",
+    "images": [
+      "tiangolo/nginx-rtmp:latest"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "deployment-nginx-rtmp-nginx-rtmp"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "19",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "major",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\",\"keel.sh/policy\":\"major\",\"keel.sh/pollSchedule\":\"@every 24h\",\"keel.sh/trigger\":\"poll\"},\"labels\":{\"app.kubernetes.io/name\":\"deployment-nginx-rtmp-nginx-rtmp\"},\"name\":\"nginx-rtmp\",\"namespace\":\"nginx-rtmp\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"deployment-nginx-rtmp-nginx-rtmp\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"deployment-nginx-rtmp-nginx-rtmp\"}},\"spec\":{\"containers\":[{\"envFrom\":[{\"configMapRef\":{\"name\":\"config\"}}],\"image\":\"tiangolo/nginx-rtmp:latest\",\"name\":\"nginx-rtmp\",\"ports\":[{\"containerPort\":1935},{\"containerPort\":8080}],\"securityContext\":{\"allowPrivilegeEscalation\":false,\"privileged\":false,\"readOnlyRootFilesystem\":false,\"runAsNonRoot\":false},\"stdin\":true,\"tty\":true}],\"nodeSelector\":{\"kubernetes.io/hostname\":\"kfc\"}}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version latest -\u003e latest [2024-09-10T17:09:22Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/pihole/pihole",
+    "name": "pihole",
+    "namespace": "pihole",
+    "kind": "deployment",
+    "policy": "all",
+    "images": [
+      "pihole/pihole:2024.07.0"
+    ],
+    "labels": {
+      "workload.user.cattle.io/workloadselector": "deployment-pihole"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "15",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "all",
+      "keel.sh/pollSchedule": "@every 1m",
+      "keel.sh/trigger": "poll",
+      "kubernetes.io/change-cause": "keel automated update, version 2022.12.1 -\u003e 2024.07.0 [2024-09-05T20:03:42Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/postgres/postgres",
+    "name": "postgres",
+    "namespace": "postgres",
+    "kind": "deployment",
+    "policy": "nil policy",
+    "images": [
+      "postgres:13.1"
+    ],
+    "labels": {},
+    "annotations": {
+      "deployment.kubernetes.io/revision": "17",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"name\":\"postgres\",\"namespace\":\"postgres\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"postgres\"}},\"strategy\":{\"type\":\"Recreate\"},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"postgres\"}},\"spec\":{\"containers\":[{\"envFrom\":[{\"configMapRef\":{\"name\":\"postgres-config\"}},{\"secretRef\":{\"name\":\"postgres-secrets\"}}],\"image\":\"postgres:13.1\",\"name\":\"postgres\",\"ports\":[{\"containerPort\":5432}],\"securityContext\":{\"runAsUser\":999},\"volumeMounts\":[{\"mountPath\":\"/var/lib/postgresql/data\",\"name\":\"postgres-data\"},{\"mountPath\":\"/dev/shm\",\"name\":\"dshm\"}]}],\"volumes\":[{\"name\":\"postgres-data\",\"persistentVolumeClaim\":{\"claimName\":\"postgres-data\"}},{\"emptyDir\":{\"medium\":\"Memory\"},\"name\":\"dshm\"}]}}}}\n"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/prometheus/blackbox-exporter",
+    "name": "blackbox-exporter",
+    "namespace": "prometheus",
+    "kind": "deployment",
+    "policy": "major",
+    "images": [
+      "quay.io/prometheus/blackbox-exporter:v0.25.0"
+    ],
+    "labels": {
+      "app.kubernetes.io/component": "exporter",
+      "app.kubernetes.io/name": "blackbox-exporter",
+      "app.kubernetes.io/version": "0.18.0"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "13",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "major",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubernetes.io/change-cause": "keel automated update, version v0.24.0 -\u003e v0.25.0 [2024-04-11T00:09:32Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/prometheus/prometheus-grafana",
+    "name": "prometheus-grafana",
+    "namespace": "prometheus",
+    "kind": "deployment",
+    "policy": "nil policy",
+    "images": [
+      "quay.io/kiwigrid/k8s-sidecar:1.12.2",
+      "grafana/grafana:8.1.0"
+    ],
+    "labels": {
+      "app.kubernetes.io/instance": "prometheus",
+      "app.kubernetes.io/managed-by": "Helm",
+      "app.kubernetes.io/name": "grafana",
+      "app.kubernetes.io/version": "8.1.0",
+      "helm.sh/chart": "grafana-6.15.0"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "2",
+      "meta.helm.sh/release-name": "prometheus",
+      "meta.helm.sh/release-namespace": "prometheus"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/prometheus/prometheus-kube-prometheus-operator",
+    "name": "prometheus-kube-prometheus-operator",
+    "namespace": "prometheus",
+    "kind": "deployment",
+    "policy": "nil policy",
+    "images": [
+      "quay.io/prometheus-operator/prometheus-operator:v0.50.0"
+    ],
+    "labels": {
+      "app": "kube-prometheus-stack-operator",
+      "app.kubernetes.io/instance": "prometheus",
+      "app.kubernetes.io/managed-by": "Helm",
+      "app.kubernetes.io/part-of": "kube-prometheus-stack",
+      "app.kubernetes.io/version": "18.0.3",
+      "chart": "kube-prometheus-stack-18.0.3",
+      "heritage": "Helm",
+      "release": "prometheus"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "2",
+      "meta.helm.sh/release-name": "prometheus",
+      "meta.helm.sh/release-namespace": "prometheus"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/prometheus/prometheus-kube-state-metrics",
+    "name": "prometheus-kube-state-metrics",
+    "namespace": "prometheus",
+    "kind": "deployment",
+    "policy": "nil policy",
+    "images": [
+      "k8s.gcr.io/kube-state-metrics/kube-state-metrics:v2.1.1"
+    ],
+    "labels": {
+      "app.kubernetes.io/instance": "prometheus",
+      "app.kubernetes.io/managed-by": "Helm",
+      "app.kubernetes.io/name": "kube-state-metrics",
+      "app.kubernetes.io/version": "2.1.1",
+      "helm.sh/chart": "kube-state-metrics-3.4.2"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "2",
+      "meta.helm.sh/release-name": "prometheus",
+      "meta.helm.sh/release-namespace": "prometheus"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/restreamer/restreamer",
+    "name": "restreamer",
+    "namespace": "restreamer",
+    "kind": "deployment",
+    "policy": "major",
+    "images": [
+      "datarhei/restreamer:latest"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "deployment-restreamer-restreamer"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "5",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "major",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\",\"keel.sh/policy\":\"major\",\"keel.sh/pollSchedule\":\"@every 24h\",\"keel.sh/trigger\":\"poll\"},\"labels\":{\"app.kubernetes.io/name\":\"deployment-restreamer-restreamer\"},\"name\":\"restreamer\",\"namespace\":\"restreamer\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"deployment-restreamer-restreamer\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"deployment-restreamer-restreamer\"}},\"spec\":{\"containers\":[{\"envFrom\":[{\"configMapRef\":{\"name\":\"config\"}}],\"image\":\"datarhei/restreamer:latest\",\"name\":\"restreamer\",\"ports\":[{\"containerPort\":1935},{\"containerPort\":1936},{\"containerPort\":8080},{\"containerPort\":8181},{\"containerPort\":6000,\"protocol\":\"UDP\"}],\"securityContext\":{\"allowPrivilegeEscalation\":false,\"privileged\":false,\"readOnlyRootFilesystem\":false,\"runAsNonRoot\":false},\"stdin\":true,\"tty\":true,\"volumeMounts\":[{\"mountPath\":\"/core/config\",\"name\":\"config\",\"subPath\":\"config\"},{\"mountPath\":\"/core/data\",\"name\":\"config\",\"subPath\":\"data\"}]}],\"nodeSelector\":{\"kubernetes.io/hostname\":\"kfc\"},\"volumes\":[{\"name\":\"config\",\"persistentVolumeClaim\":{\"claimName\":\"restreamer-config\"}}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version latest -\u003e latest [2024-04-24T00:35:18Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/teamspeak/teamspeak",
+    "name": "teamspeak",
+    "namespace": "teamspeak",
+    "kind": "deployment",
+    "policy": "force",
+    "images": [
+      "library/teamspeak:3.13.7"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "deployment-teamspeak"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "9",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubernetes.io/change-cause": "keel automated update, version 3.13.7 -\u003e 3.13.7 [2024-07-24T08:36:19Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/telegram-click/telegram-click",
+    "name": "telegram-click",
+    "namespace": "telegram-click",
+    "kind": "deployment",
+    "policy": "glob:v*",
+    "images": [
+      "markusressel/telegram-click:v6.0.3"
+    ],
+    "labels": {
+      "workload.user.cattle.io/workloadselector": "deployment-telegram-click-telegram-click"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "3",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "glob:v*",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{\"keel.sh/policy\":\"glob:v*\",\"keel.sh/pollSchedule\":\"@every 24h\",\"keel.sh/trigger\":\"default\"},\"labels\":{\"workload.user.cattle.io/workloadselector\":\"deployment-telegram-click-telegram-click\"},\"name\":\"telegram-click\",\"namespace\":\"telegram-click\"},\"spec\":{\"selector\":{\"matchLabels\":{\"workload.user.cattle.io/workloadselector\":\"deployment-telegram-click-telegram-click\"}},\"template\":{\"metadata\":{\"labels\":{\"workload.user.cattle.io/workloadselector\":\"deployment-telegram-click-telegram-click\"}},\"spec\":{\"containers\":[{\"envFrom\":[{\"secretRef\":{\"name\":\"config\",\"optional\":false}}],\"image\":\"markusressel/telegram-click:v5.0.1\",\"imagePullPolicy\":\"Always\",\"name\":\"telegram-click\",\"securityContext\":{\"allowPrivilegeEscalation\":false,\"privileged\":false,\"readOnlyRootFilesystem\":false,\"runAsNonRoot\":false},\"stdin\":true,\"tty\":true}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version v6.0.2 -\u003e v6.0.3 [2024-09-27T21:37:03Z]"
+    },
+    "status": {
+      "replicas": 0,
+      "updatedReplicas": 0,
+      "readyReplicas": 0,
+      "availableReplicas": 0,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/unifi/unifi-controller",
+    "name": "unifi-controller",
+    "namespace": "unifi",
+    "kind": "deployment",
+    "policy": "force",
+    "images": [
+      "ghcr.io/linuxserver/unifi-controller:latest"
+    ],
+    "labels": {
+      "workload.user.cattle.io/workloadselector": "deployment-unifi-unifi-controller"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "74",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubernetes.io/change-cause": "keel automated update, version latest -\u003e latest [2024-01-02T06:11:14Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/wiki/mkdocseditor-backend",
+    "name": "mkdocseditor-backend",
+    "namespace": "wiki",
+    "kind": "deployment",
+    "policy": "all",
+    "images": [
+      "ghcr.io/mkdocseditor/mkdocseditor-backend:latest"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "mkdocseditor-backend"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "12",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "all",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\",\"keel.sh/policy\":\"all\",\"keel.sh/pollSchedule\":\"@every 24h\",\"keel.sh/trigger\":\"poll\"},\"labels\":{\"app.kubernetes.io/name\":\"mkdocseditor-backend\"},\"name\":\"mkdocseditor-backend\",\"namespace\":\"wiki\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"mkdocseditor-backend\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"mkdocseditor-backend\"}},\"spec\":{\"containers\":[{\"image\":\"ghcr.io/mkdocseditor/mkdocseditor-backend:latest\",\"name\":\"mkdocseditor-backend\",\"ports\":[{\"containerPort\":7413,\"name\":\"http\",\"protocol\":\"TCP\"}],\"securityContext\":{\"allowPrivilegeEscalation\":false,\"runAsNonRoot\":false},\"volumeMounts\":[{\"mountPath\":\"/app/mkdocsrest.yaml\",\"name\":\"config\",\"readOnly\":true,\"subPath\":\"mkdocsrest.yaml\"},{\"mountPath\":\"/data\",\"name\":\"data\"}]}],\"nodeName\":\"kfc\",\"volumes\":[{\"name\":\"config\",\"secret\":{\"defaultMode\":256,\"items\":[{\"key\":\"config\",\"path\":\"mkdocsrest.yaml\"}],\"optional\":false,\"secretName\":\"mkdocseditor-backend\"}},{\"name\":\"data\",\"persistentVolumeClaim\":{\"claimName\":\"docs-backend\"}}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version latest -\u003e latest [2024-04-20T00:10:57Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "deployment/wiki/mkdocseditor-web",
+    "name": "mkdocseditor-web",
+    "namespace": "wiki",
+    "kind": "deployment",
+    "policy": "all",
+    "images": [
+      "mkdocseditor/mkdocseditor-web:latest"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "mkdocseditor-web"
+    },
+    "annotations": {
+      "deployment.kubernetes.io/revision": "1",
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "all",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\",\"keel.sh/policy\":\"all\",\"keel.sh/pollSchedule\":\"@every 24h\",\"keel.sh/trigger\":\"poll\"},\"labels\":{\"app.kubernetes.io/name\":\"mkdocseditor-web\"},\"name\":\"mkdocseditor-web\",\"namespace\":\"wiki\"},\"spec\":{\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"mkdocseditor-web\"}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"mkdocseditor-web\"}},\"spec\":{\"containers\":[{\"image\":\"mkdocseditor/mkdocseditor-web:latest\",\"name\":\"mkdocseditor-web\",\"ports\":[{\"containerPort\":8080,\"name\":\"http\",\"protocol\":\"TCP\"}],\"securityContext\":{\"allowPrivilegeEscalation\":false,\"runAsNonRoot\":false}}]}}}}\n"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/cron/healthchecks",
+    "name": "healthchecks",
+    "namespace": "cron",
+    "kind": "statefulset",
+    "policy": "force",
+    "images": [
+      "ghcr.io/linuxserver/healthchecks:v1.17.0-ls72"
+    ],
+    "labels": {
+      "workload.user.cattle.io/workloadselector": "statefulSet-cron-healthchecks"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/influxdb/influxdb",
+    "name": "influxdb",
+    "namespace": "influxdb",
+    "kind": "statefulset",
+    "policy": "nil policy",
+    "images": [
+      "influxdb:1.8.10-alpine"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "statefulSet-influxdb-influxdb"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/pollSchedule": "@every 60m"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/jdownloader/jdownloader",
+    "name": "jdownloader",
+    "namespace": "jdownloader",
+    "kind": "statefulset",
+    "policy": "force",
+    "images": [
+      "jlesage/jdownloader-2:latest"
+    ],
+    "labels": {
+      "workload.user.cattle.io/workloadselector": "statefulSet-jdownloader-jdownloader"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubernetes.io/change-cause": "keel automated update, version latest -\u003e latest [2024-07-04T11:33:36Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/loki/loki-chunks-cache",
+    "name": "loki-chunks-cache",
+    "namespace": "loki",
+    "kind": "statefulset",
+    "policy": "nil policy",
+    "images": [
+      "memcached:1.6.23-alpine",
+      "prom/memcached-exporter:v0.14.2"
+    ],
+    "labels": {
+      "app.kubernetes.io/component": "memcached-chunks-cache",
+      "app.kubernetes.io/instance": "loki",
+      "app.kubernetes.io/managed-by": "Helm",
+      "app.kubernetes.io/name": "loki",
+      "app.kubernetes.io/version": "3.0.0",
+      "helm.sh/chart": "loki-6.4.2",
+      "name": "memcached-chunks-cache"
+    },
+    "annotations": {
+      "meta.helm.sh/release-name": "loki",
+      "meta.helm.sh/release-namespace": "loki"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/loki/loki-results-cache",
+    "name": "loki-results-cache",
+    "namespace": "loki",
+    "kind": "statefulset",
+    "policy": "nil policy",
+    "images": [
+      "memcached:1.6.23-alpine",
+      "prom/memcached-exporter:v0.14.2"
+    ],
+    "labels": {
+      "app.kubernetes.io/component": "memcached-results-cache",
+      "app.kubernetes.io/instance": "loki",
+      "app.kubernetes.io/managed-by": "Helm",
+      "app.kubernetes.io/name": "loki",
+      "app.kubernetes.io/version": "3.0.0",
+      "helm.sh/chart": "loki-6.4.2",
+      "name": "memcached-results-cache"
+    },
+    "annotations": {
+      "meta.helm.sh/release-name": "loki",
+      "meta.helm.sh/release-namespace": "loki"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/matrix/riot-web",
+    "name": "riot-web",
+    "namespace": "matrix",
+    "kind": "statefulset",
+    "policy": "major",
+    "images": [
+      "vectorim/element-web:v1.11.78"
+    ],
+    "labels": {
+      "workload.user.cattle.io/workloadselector": "statefulSet-matrix-riot-web"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "major",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubernetes.io/change-cause": "keel automated update, version v1.11.77 -\u003e v1.11.78 [2024-09-25T16:01:41Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/matrix/synapse",
+    "name": "synapse",
+    "namespace": "matrix",
+    "kind": "statefulset",
+    "policy": "force",
+    "images": [
+      "matrixdotorg/synapse:latest",
+      "dock.mau.dev/mautrix/telegram:v0.12.2",
+      "dock.mau.dev/mautrix/signal:v0.4.2",
+      "registry.gitlab.com/signald/signald:latest"
+    ],
+    "labels": {
+      "workload.user.cattle.io/workloadselector": "statefulSet-matrix-synapse"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubernetes.io/change-cause": "keel automated update, version latest -\u003e latest [2024-09-17T23:42:15Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/monitoring/alerticular",
+    "name": "alerticular",
+    "namespace": "monitoring",
+    "kind": "statefulset",
+    "policy": "force",
+    "images": [
+      "ghcr.io/ekeih/alerticular:0.1.3"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "alerticular"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/mopidy/mopidy",
+    "name": "mopidy",
+    "namespace": "mopidy",
+    "kind": "statefulset",
+    "policy": "force",
+    "images": [
+      "markusressel/mopidy:latest"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "mopidy"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/nextcloud/nextcloud",
+    "name": "nextcloud",
+    "namespace": "nextcloud",
+    "kind": "statefulset",
+    "policy": "force",
+    "images": [
+      "library/nextcloud:25.0.2",
+      "library/redis:7.4.0",
+      "collabora/code:6.4.3.1"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "statefulSet-nextcloud-nextcloud"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubernetes.io/change-cause": "keel automated update, version 7.4.0 -\u003e 7.4.0 [2024-08-15T09:44:20Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/niles/niles-backend",
+    "name": "niles-backend",
+    "namespace": "niles",
+    "kind": "statefulset",
+    "policy": "force",
+    "images": [
+      "nileshouseholdmanagement/niles-backend:latest",
+      "nileshouseholdmanagement/niles-telegram:latest",
+      "markusressel/barcode-server:v2.3.3"
+    ],
+    "labels": {
+      "workload.user.cattle.io/workloadselector": "statefulSet-niles-niles-backend"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "force",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubernetes.io/change-cause": "keel automated update, version latest -\u003e latest [2024-05-22T03:57:04Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/paperless/paperless",
+    "name": "paperless",
+    "namespace": "paperless",
+    "kind": "statefulset",
+    "policy": "major",
+    "images": [
+      "drakkan/sftpgo:edge",
+      "library/redis:7.4.0",
+      "ghcr.io/paperless-ngx/paperless-ngx:2.12.1"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "statefulSet-paperless-paperless",
+      "keel.sh/policy": "major",
+      "keel.sh/trigger": "poll"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"StatefulSet\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\"},\"labels\":{\"app.kubernetes.io/name\":\"statefulSet-paperless-paperless\",\"keel.sh/policy\":\"major\",\"keel.sh/trigger\":\"poll\"},\"name\":\"paperless\",\"namespace\":\"paperless\"},\"spec\":{\"podManagementPolicy\":\"OrderedReady\",\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"statefulSet-paperless-paperless\"}},\"serviceName\":\"paperless\",\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"statefulSet-paperless-paperless\"}},\"spec\":{\"containers\":[{\"envFrom\":[{\"configMapRef\":{\"name\":\"ftpserver\"}}],\"image\":\"drakkan/sftpgo:edge\",\"name\":\"ftpserver\",\"ports\":[{\"containerPort\":8080,\"name\":\"ftpweb\",\"protocol\":\"TCP\"},{\"containerPort\":2022,\"name\":\"sftp\",\"protocol\":\"TCP\"},{\"containerPort\":2121,\"name\":\"ftp\",\"protocol\":\"TCP\"},{\"containerPort\":50000},{\"containerPort\":50001},{\"containerPort\":50002},{\"containerPort\":50003},{\"containerPort\":50004},{\"containerPort\":50005},{\"containerPort\":50006},{\"containerPort\":50007},{\"containerPort\":50008},{\"containerPort\":50009}],\"volumeMounts\":[{\"mountPath\":\"/srv/sftpgo\",\"name\":\"data\",\"subPath\":\"sftpgo-persistant-data\"},{\"mountPath\":\"/var/lib/sftpgo\",\"name\":\"data\",\"subPath\":\"stfpgo-home-system\"},{\"mountPath\":\"/srv/sftpgo/data/paperless/\",\"name\":\"consume\"}]},{\"image\":\"docker.io/library/redis:7.0.5\",\"name\":\"redis\"},{\"envFrom\":[{\"configMapRef\":{\"name\":\"config\"}}],\"image\":\"ghcr.io/paperless-ngx/paperless-ngx:1.10.1\",\"livenessProbe\":{\"httpGet\":{\"path\":\"/\",\"port\":8000}},\"name\":\"paperless\",\"ports\":[{\"containerPort\":8000,\"name\":\"web\",\"protocol\":\"TCP\"}],\"stdin\":true,\"tty\":true,\"volumeMounts\":[{\"mountPath\":\"/usr/src/paperless/data\",\"name\":\"data\"},{\"mountPath\":\"/usr/src/paperless/media\",\"name\":\"media\"},{\"mountPath\":\"/usr/src/paperless/export\",\"name\":\"export\"},{\"mountPath\":\"/usr/src/paperless/consume\",\"name\":\"consume\"}]}],\"nodeName\":\"frittenbude\",\"nodeSelector\":{\"kubernetes.io/hostname\":\"frittenbude\"},\"securityContext\":{\"fsGroup\":1103},\"volumes\":[{\"name\":\"data\",\"persistentVolumeClaim\":{\"claimName\":\"data\"}},{\"name\":\"media\",\"persistentVolumeClaim\":{\"claimName\":\"media\"}},{\"name\":\"export\",\"persistentVolumeClaim\":{\"claimName\":\"export\"}},{\"name\":\"consume\",\"persistentVolumeClaim\":{\"claimName\":\"consume\"}}]}},\"updateStrategy\":{\"type\":\"RollingUpdate\"}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version 2.12 -\u003e 2.12.1 [2024-09-19T17:28:03Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/plex/plex2",
+    "name": "plex2",
+    "namespace": "plex",
+    "kind": "statefulset",
+    "policy": "force",
+    "images": [
+      "plexinc/pms-docker:latest"
+    ],
+    "labels": {
+      "keel.sh/policy": "force",
+      "workload.user.cattle.io/workloadselector": "statefulSet-plex-plex2"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"StatefulSet\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\"},\"labels\":{\"keel.sh/policy\":\"force\",\"keel.sh/trigger\":\"poll\",\"workload.user.cattle.io/workloadselector\":\"statefulSet-plex-plex2\"},\"name\":\"plex2\",\"namespace\":\"plex\"},\"spec\":{\"podManagementPolicy\":\"OrderedReady\",\"selector\":{\"matchLabels\":{\"workload.user.cattle.io/workloadselector\":\"statefulSet-plex-plex2\"}},\"serviceName\":\"plex2\",\"template\":{\"metadata\":{\"labels\":{\"workload.user.cattle.io/workloadselector\":\"statefulSet-plex-plex2\"}},\"spec\":{\"containers\":[{\"envFrom\":[{\"configMapRef\":{\"name\":\"config2\"}}],\"image\":\"plexinc/pms-docker:latest\",\"livenessProbe\":{\"httpGet\":{\"path\":\"/identity\",\"port\":32400},\"initialDelaySeconds\":600},\"name\":\"plex2\",\"ports\":[{\"containerPort\":32400,\"name\":\"web\",\"protocol\":\"TCP\"},{\"containerPort\":3005,\"name\":\"a\",\"protocol\":\"TCP\"},{\"containerPort\":8324,\"name\":\"b\",\"protocol\":\"TCP\"},{\"containerPort\":32469,\"name\":\"c\",\"protocol\":\"TCP\"},{\"containerPort\":1900,\"name\":\"d\",\"protocol\":\"UDP\"},{\"containerPort\":32410,\"name\":\"e\",\"protocol\":\"UDP\"},{\"containerPort\":32412,\"name\":\"f\",\"protocol\":\"UDP\"},{\"containerPort\":32413,\"name\":\"g\",\"protocol\":\"UDP\"},{\"containerPort\":32414,\"name\":\"h\",\"protocol\":\"UDP\"}],\"stdin\":true,\"tty\":true,\"volumeMounts\":[{\"mountPath\":\"/data/media\",\"name\":\"media\"},{\"mountPath\":\"/config\",\"name\":\"config2\"},{\"mountPath\":\"/transcode\",\"name\":\"config2\"}]}],\"nodeName\":\"kfc\",\"nodeSelector\":{\"kubernetes.io/hostname\":\"kfc\"},\"securityContext\":{\"fsGroup\":1103},\"volumes\":[{\"name\":\"media\",\"persistentVolumeClaim\":{\"claimName\":\"media\"}},{\"name\":\"config2\",\"persistentVolumeClaim\":{\"claimName\":\"config2\"}}]}},\"updateStrategy\":{\"type\":\"RollingUpdate\"}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version latest -\u003e latest [2024-09-26T19:38:40Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/postwoman/postwoman",
+    "name": "postwoman",
+    "namespace": "postwoman",
+    "kind": "statefulset",
+    "policy": "nil policy",
+    "images": [
+      "liyasthomas/postwoman:v1.10.0"
+    ],
+    "labels": {
+      "workload.user.cattle.io/workloadselector": "statefulSet-postwoman-postwoman"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/pollSchedule": "@every 60m"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/prometheus/alertmanager-prometheus-kube-prometheus-alertmanager",
+    "name": "alertmanager-prometheus-kube-prometheus-alertmanager",
+    "namespace": "prometheus",
+    "kind": "statefulset",
+    "policy": "nil policy",
+    "images": [
+      "quay.io/prometheus/alertmanager:v0.22.2",
+      "quay.io/prometheus-operator/prometheus-config-reloader:v0.50.0"
+    ],
+    "labels": {
+      "app": "kube-prometheus-stack-alertmanager",
+      "app.kubernetes.io/instance": "prometheus",
+      "app.kubernetes.io/managed-by": "Helm",
+      "app.kubernetes.io/part-of": "kube-prometheus-stack",
+      "app.kubernetes.io/version": "18.0.3",
+      "chart": "kube-prometheus-stack-18.0.3",
+      "heritage": "Helm",
+      "release": "prometheus"
+    },
+    "annotations": {
+      "meta.helm.sh/release-name": "prometheus",
+      "meta.helm.sh/release-namespace": "prometheus",
+      "prometheus-operator-input-hash": "789747965878021627"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/prometheus/prometheus-prometheus-kube-prometheus-prometheus",
+    "name": "prometheus-prometheus-kube-prometheus-prometheus",
+    "namespace": "prometheus",
+    "kind": "statefulset",
+    "policy": "nil policy",
+    "images": [
+      "quay.io/prometheus/prometheus:v2.28.1",
+      "quay.io/prometheus-operator/prometheus-config-reloader:v0.50.0"
+    ],
+    "labels": {
+      "app": "kube-prometheus-stack-prometheus",
+      "app.kubernetes.io/instance": "prometheus",
+      "app.kubernetes.io/managed-by": "Helm",
+      "app.kubernetes.io/part-of": "kube-prometheus-stack",
+      "app.kubernetes.io/version": "18.0.3",
+      "chart": "kube-prometheus-stack-18.0.3",
+      "heritage": "Helm",
+      "operator.prometheus.io/name": "prometheus-kube-prometheus-prometheus",
+      "operator.prometheus.io/shard": "0",
+      "release": "prometheus"
+    },
+    "annotations": {
+      "meta.helm.sh/release-name": "prometheus",
+      "meta.helm.sh/release-namespace": "prometheus",
+      "prometheus-operator-input-hash": "11887460014084105563"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/py-image-dedup/deduplicator",
+    "name": "deduplicator",
+    "namespace": "py-image-dedup",
+    "kind": "statefulset",
+    "policy": "force",
+    "images": [
+      "markusressel/py-image-dedup:latest"
+    ],
+    "labels": {
+      "keel.sh/policy": "force",
+      "workload.user.cattle.io/workloadselector": "statefulSet-plex-plex"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"StatefulSet\",\"metadata\":{\"annotations\":{\"keel.sh/approvals\":\"1\"},\"labels\":{\"keel.sh/policy\":\"force\",\"keel.sh/trigger\":\"poll\",\"workload.user.cattle.io/workloadselector\":\"statefulSet-plex-plex\"},\"name\":\"deduplicator\",\"namespace\":\"py-image-dedup\"},\"spec\":{\"podManagementPolicy\":\"OrderedReady\",\"selector\":{\"matchLabels\":{\"workload.user.cattle.io/workloadselector\":\"statefulSet-plex-plex\"}},\"serviceName\":\"py-image-dedup\",\"template\":{\"metadata\":{\"labels\":{\"workload.user.cattle.io/workloadselector\":\"statefulSet-plex-plex\"}},\"spec\":{\"containers\":[{\"envFrom\":[{\"configMapRef\":{\"name\":\"config\"}}],\"image\":\"markusressel/py-image-dedup:latest\",\"name\":\"py-image-dedup\",\"stdin\":true,\"tty\":true,\"volumeMounts\":[{\"mountPath\":\"/data-in\",\"name\":\"data-in\"},{\"mountPath\":\"/data-out\",\"name\":\"data-out\"},{\"mountPath\":\"~/py_image_dedup.yaml\",\"name\":\"config\",\"subPath\":\"py_image_dedup.yaml\"}]}],\"nodeName\":\"kfc\",\"nodeSelector\":{\"kubernetes.io/hostname\":\"kfc\"},\"securityContext\":{\"fsGroup\":1103},\"volumes\":[{\"name\":\"data-in\",\"persistentVolumeClaim\":{\"claimName\":\"data-in\"}},{\"name\":\"data-out\",\"persistentVolumeClaim\":{\"claimName\":\"data-out\"}},{\"name\":\"config\",\"secret\":{\"defaultMode\":256,\"items\":[{\"key\":\"py_image_dedup.yaml\",\"mode\":256,\"path\":\"py_image_dedup.yaml\"}],\"optional\":false,\"secretName\":\"config\"}}]}},\"updateStrategy\":{\"type\":\"RollingUpdate\"}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version latest -\u003e latest [2024-06-06T07:06:31Z]"
+    },
+    "status": {
+      "replicas": 0,
+      "updatedReplicas": 0,
+      "readyReplicas": 0,
+      "availableReplicas": 0,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/rhasspy/rhasspy-server",
+    "name": "rhasspy-server",
+    "namespace": "rhasspy",
+    "kind": "statefulset",
+    "policy": "major",
+    "images": [
+      "rhasspy/rhasspy:2.5.11"
+    ],
+    "labels": {
+      "app.kubernetes.io/name": "rhasspy-server"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "major",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  },
+  {
+    "provider": "kubernetes",
+    "identifier": "statefulset/syncthing/syncthing",
+    "name": "syncthing",
+    "namespace": "syncthing",
+    "kind": "statefulset",
+    "policy": "major",
+    "images": [
+      "syncthing/syncthing:1.27.12"
+    ],
+    "labels": {
+      "workload.user.cattle.io/workloadselector": "statefulSet-syncthing-syncthing"
+    },
+    "annotations": {
+      "keel.sh/approvals": "1",
+      "keel.sh/policy": "major",
+      "keel.sh/pollSchedule": "@every 24h",
+      "keel.sh/trigger": "poll",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"StatefulSet\",\"metadata\":{\"annotations\":{},\"labels\":{\"keel.sh/policy\":\"minor\",\"keel.sh/trigger\":\"poll\",\"workload.user.cattle.io/workloadselector\":\"statefulSet-syncthing-syncthing\"},\"name\":\"syncthing\",\"namespace\":\"syncthing\"},\"spec\":{\"podManagementPolicy\":\"OrderedReady\",\"selector\":{\"matchLabels\":{\"workload.user.cattle.io/workloadselector\":\"statefulSet-syncthing-syncthing\"}},\"serviceName\":\"syncthing\",\"template\":{\"metadata\":{\"labels\":{\"workload.user.cattle.io/workloadselector\":\"statefulSet-syncthing-syncthing\"}},\"spec\":{\"containers\":[{\"env\":[{\"name\":\"PGID\",\"value\":\"1103\"},{\"name\":\"PUID\",\"value\":\"968\"}],\"image\":\"syncthing/syncthing:1.12.0\",\"name\":\"syncthing\",\"ports\":[{\"containerPort\":8384},{\"containerPort\":22000}],\"securityContext\":{\"allowPrivilegeEscalation\":false,\"privileged\":false,\"readOnlyRootFilesystem\":false,\"runAsNonRoot\":false},\"stdin\":true,\"tty\":true,\"volumeMounts\":[{\"mountPath\":\"/var/syncthing/data\",\"name\":\"data\"},{\"mountPath\":\"/var/syncthing/config\",\"name\":\"config\"}]}],\"nodeSelector\":{\"kubernetes.io/hostname\":\"frittenbude\"},\"volumes\":[{\"name\":\"data\",\"persistentVolumeClaim\":{\"claimName\":\"syncthing-data\"}},{\"name\":\"config\",\"persistentVolumeClaim\":{\"claimName\":\"config\"}}]}}}}\n",
+      "kubernetes.io/change-cause": "keel automated update, version 1.27.11 -\u003e 1.27.12 [2024-09-07T22:10:54Z]"
+    },
+    "status": {
+      "replicas": 1,
+      "updatedReplicas": 1,
+      "readyReplicas": 1,
+      "availableReplicas": 1,
+      "unavailableReplicas": 0
+    }
+  }
+]
