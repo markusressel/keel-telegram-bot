@@ -102,8 +102,8 @@ class Policy(ABC):
         """
         if value.startswith("glob:"):
             return GlobPolicy(value[5:])
-        elif value.startswith("regex:"):
-            return RegexPolicy(re.compile(value[6:], re.IGNORECASE))
+        elif value.startswith("regexp:"):
+            return RegexPolicy(re.compile(value[7:], re.IGNORECASE))
         else:
             return SemverPolicyType.from_value(value)
 
