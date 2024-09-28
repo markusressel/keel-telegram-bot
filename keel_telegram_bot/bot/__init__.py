@@ -232,7 +232,7 @@ class KeelTelegramBot:
 
             return result
 
-        items = self._api_client.get_tracked()
+        items = self._api_client.get_tracked_images()
         filtered_items = filter_tracked_images_by(items, glob)
 
         formatted_message = "\n\n".join(
@@ -364,7 +364,6 @@ class KeelTelegramBot:
             if schedule is not None:
                 self._api_client.set_schedule(
                     identifier=item.identifier,
-                    provider=Provider.Kubernetes,
                     schedule=schedule,
                 )
 

@@ -53,13 +53,24 @@ class KeelApiClient:
                 return resource
         return None
 
-    def get_tracked(self) -> List[TrackedImage]:
+    def get_tracked_images(self) -> List[TrackedImage]:
         """
         Returns a list of all tracked images
         """
         response = self._do_request(HttpMethod.GET, self._base_url + "/v1/tracked")
         result = [TrackedImage.from_dict(tracked) for tracked in response]
         return result
+
+    def get_tracked_image(self, identifier: str) -> TrackedImage or None:
+        """
+        Returns a list of all tracked images
+        """
+        trecked_images = self.get_tracked_images()
+        for tracked_image in trecked_images:
+            if tracked_image.image == identifier:
+                return tracked_image
+        return None
+
 
     def set_tracked(self, identifier: str, provider: Provider, trigger: Trigger,
                     schedule: PollSchedule or None) -> None:
@@ -105,18 +116,14 @@ class KeelApiClient:
             "policy": policy.value,
         })
 
-    def set_schedule(self, identifier: str, provider: Provider, schedule: PollSchedule) -> None:
+    def set_schedule(self, identifier: str, schedule: PollSchedule) -> None:
         """
         Set the polling schedule for an image
         :param identifier: the identifier of the image
-        :param provider: the provider of the image
         :param schedule: the schedule of the image
         """
-        self._do_request(HttpMethod.PUT, self._base_url + "/v1/schedule", json={
-            "identifier": identifier,
-            "provider": provider.value,
-            "schedule": schedule.value,
-        })
+        tracked_image = self.get_tracked_image(identifier)
+        self.set_tracked(identifier, tracked_image.provider, tracked_image.trigger, schedule)
 
     def set_trigger(self, identifier: str, provider: Provider, trigger: Trigger) -> None:
         """
