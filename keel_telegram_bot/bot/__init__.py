@@ -219,16 +219,17 @@ class KeelTelegramBot:
         message = update.effective_message
         chat_id = update.effective_chat.id
 
-        def filter_tracked_images_by(resources: List[TrackedImage], glob: str or None) -> List[TrackedImage]:
-            result = resources
+        def filter_tracked_images_by(images: List[TrackedImage], glob: str or None) -> List[TrackedImage]:
+            result = images
             if glob is not None:
                 result = list(filter(
-                    lambda x: re.search(glob, x.image) or re.search(glob, x.namespace) or re.search(glob,
-                                                                                                    x.policy.value) or any(
-                        list(map(lambda y: re.search(glob, y), x.images))), resources))
+                    lambda x: re.search(glob, x.image) or
+                              re.search(glob, x.namespace) or
+                              re.search(glob, x.policy.value)
+                ))
 
-            # apply limit
-            result = result[:limit]
+                # apply limit
+                result = result[:limit]
 
             return result
 
