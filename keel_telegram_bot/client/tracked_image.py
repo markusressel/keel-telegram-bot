@@ -1,13 +1,13 @@
 from attr import dataclass
 
-from keel_telegram_bot.client.types import Trigger, Policy
+from keel_telegram_bot.client.types import Trigger, Policy, PollSchedule
 
 
 @dataclass
 class TrackedImage:
     image: str
     trigger: Trigger
-    poll_schedule: str
+    poll_schedule: PollSchedule
     provider: str
     namespace: str
     policy: Policy

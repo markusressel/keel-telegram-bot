@@ -61,16 +61,15 @@ class KeelApiClient:
         result = [TrackedImage.from_dict(tracked) for tracked in response]
         return result
 
-    def get_tracked_image(self, identifier: str) -> TrackedImage or None:
+    def get_tracked_image(self, namespace: str, image: str) -> TrackedImage or None:
         """
         Returns a list of all tracked images
         """
         trecked_images = self.get_tracked_images()
         for tracked_image in trecked_images:
-            if tracked_image.image == identifier:
+            if tracked_image.namespace == namespace and tracked_image.image == image:
                 return tracked_image
         return None
-
 
     def set_tracked(self, identifier: str, provider: Provider, trigger: Trigger,
                     schedule: PollSchedule or None) -> None:
@@ -123,7 +122,8 @@ class KeelApiClient:
         :param schedule: the schedule of the image
         """
         resource = self.get_resource(identifier)
-        self.set_tracked(identifier, resource.provider, resource.trigger, schedule)
+        tracked_image = self.get_tracked_image(resource.namespace, resource.name)
+        self.set_tracked(identifier, resource.provider, tracked_image.trigger, schedule)
 
     def set_trigger(self, identifier: str, trigger: Trigger) -> None:
         """
@@ -132,7 +132,8 @@ class KeelApiClient:
         :param trigger: the trigger of the image
         """
         resource = self.get_resource(identifier)
-        self.set_tracked(identifier, resource.provider, trigger, resource.schedule)
+        tracked_image = self.get_tracked_image(resource.namespace, resource.name)
+        self.set_tracked(identifier, resource.provider, trigger, tracked_image.poll_schedule)
 
     def get_approvals(self, rejected: bool = None, archived: bool = None) -> List[Approval]:
         """
