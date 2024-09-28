@@ -3,7 +3,7 @@ from typing import List, Dict
 from attr import dataclass
 
 from keel_telegram_bot.client.k8s_status import K8SStatus
-from keel_telegram_bot.client.types import Provider, SemverPolicyType
+from keel_telegram_bot.client.types import Provider, Policy
 
 
 @dataclass
@@ -16,7 +16,7 @@ class Resource:
     name: str
     namespace: str
     kind: str
-    policy: SemverPolicyType
+    policy: Policy
     images: List[str]
     labels: Dict[str, str]
     annotations: Dict[str, str]
@@ -30,7 +30,7 @@ class Resource:
             name=data["name"],
             namespace=data["namespace"],
             kind=data["kind"],
-            policy=SemverPolicyType.from_value(data["policy"]),
+            policy=Policy.from_value(data["policy"]),
             images=data["images"],
             labels=data["labels"],
             annotations=data["annotations"],

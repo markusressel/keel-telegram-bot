@@ -1,6 +1,6 @@
 from attr import dataclass
 
-from keel_telegram_bot.client.types import SemverPolicyType, Trigger
+from keel_telegram_bot.client.types import Trigger, Policy
 
 
 @dataclass
@@ -10,7 +10,7 @@ class TrackedImage:
     poll_schedule: str
     provider: str
     namespace: str
-    policy: SemverPolicyType
+    policy: Policy
     registry: str
 
     @staticmethod
@@ -21,7 +21,7 @@ class TrackedImage:
             poll_schedule=d["pollSchedule"],
             provider=d["provider"],
             namespace=d["namespace"],
-            policy=SemverPolicyType.from_value(d["policy"]),
+            policy=Policy.from_value(d["policy"]),
             registry=d["registry"],
         )
 

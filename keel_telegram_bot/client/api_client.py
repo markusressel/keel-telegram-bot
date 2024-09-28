@@ -10,7 +10,7 @@ from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.client.daily_stats import DailyStats
 from keel_telegram_bot.client.resource import Resource
 from keel_telegram_bot.client.tracked_image import TrackedImage
-from keel_telegram_bot.client.types import Action, Provider, Trigger
+from keel_telegram_bot.client.types import Action, Provider, Trigger, Policy, PollSchedule
 from keel_telegram_bot.const import REQUESTS_TIMEOUT
 
 LOGGER = logging.getLogger(__name__)
@@ -71,8 +71,8 @@ class KeelApiClient:
         """
         self._do_request(HttpMethod.PUT, self._base_url + "/v1/tracked", json={
             "identifier": identifier,
-            "provider": provider.value,
-            "trigger": trigger.value,
+            "provider": provider,
+            "trigger": trigger,
             "schedule": schedule,
         })
 
@@ -87,8 +87,34 @@ class KeelApiClient:
         """
         self._do_request(HttpMethod.PUT, self._base_url + "/v1/approvals", json={
             "identifier": identifier,
-            "provider": provider.value,
+            "provider": provider,
             "votesRequired": votes_required,
+        })
+
+    def set_policy(self, identifier: str, provider: Provider, policy: Policy) -> None:
+        """
+        Set the policy for an image
+        :param identifier: the identifier of the image
+        :param provider: the provider of the image
+        :param policy: the policy of the image
+        """
+        self._do_request(HttpMethod.PUT, self._base_url + "/v1/policies", json={
+            "identifier": identifier,
+            "provider": provider,
+            "policy": policy,
+        })
+
+    def set_schedule(self, identifier: str, provider: Provider, schedule: PollSchedule) -> None:
+        """
+        Set the polling schedule for an image
+        :param identifier: the identifier of the image
+        :param provider: the provider of the image
+        :param schedule: the schedule of the image
+        """
+        self._do_request(HttpMethod.PUT, self._base_url + "/v1/schedule", json={
+            "identifier": identifier,
+            "provider": provider,
+            "schedule": schedule,
         })
 
     def get_approvals(self, rejected: bool = None, archived: bool = None) -> List[Approval]:
@@ -146,7 +172,7 @@ class KeelApiClient:
             "id": id,
             "identifier": identifier,
             "voter": voter,
-            "action": action.value,
+            "action": action,
         })
 
     def get_stats(self) -> DailyStats:

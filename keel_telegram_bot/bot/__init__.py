@@ -18,7 +18,7 @@ from keel_telegram_bot.client.api_client import KeelApiClient
 from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.client.resource import Resource
 from keel_telegram_bot.client.tracked_image import TrackedImage
-from keel_telegram_bot.client.types import SemverPolicyType, Provider
+from keel_telegram_bot.client.types import SemverPolicyType, Provider, Policy, PollSchedule
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.stats import *
 from keel_telegram_bot.util import send_message, approval_to_str, resource_to_str, tracked_image_to_str
@@ -316,11 +316,21 @@ class KeelTelegramBot:
              arguments=[
                  Argument(name=["identifier", "i"], description="Resource identifier",
                           example="daemonset/docker-proxy/docker-proxy"),
-                 Argument(name=["count", "c"], description="Approval count", example="2", type=int),
+                 Argument(name=["count", "c"], description="Approval count", example="2", type=int, optional=True),
+                 Argument(name=["policy", "p"], description="Policy", example="all", type=Policy,
+                          converter=lambda x: Policy.from_value(x), optional=True),
+                 Argument(name=["schedule", "s"], description="Schedule to use for polling image versions",
+                          example="24h", type=PollSchedule,
+                          converter=lambda x: PollSchedule.from_value(x), optional=True)
              ],
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
-    async def _set_approval_count_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
-                                           identifier: str, count: int) -> None:
+    async def _set_approval_count_callback(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE,
+        identifier: str,
+        count: int or None,
+        policy: Policy or None,
+        schedule: PollSchedule or None,
+    ) -> None:
         """
         Set the required approval count for a resource
         """
@@ -333,11 +343,26 @@ class KeelTelegramBot:
             message = update.effective_message
             chat_id = update.effective_chat.id
 
-            self._api_client.set_required_approvals_count(
-                identifier=item.identifier,
-                provider=Provider.Kubernetes,
-                votes_required=data["count"],
-            )
+            if count is not None:
+                self._api_client.set_required_approvals_count(
+                    identifier=item.identifier,
+                    provider=Provider.Kubernetes,
+                    votes_required=count,
+                )
+
+            if policy is not None:
+                self._api_client.set_policy(
+                    identifier=item.identifier,
+                    provider=Provider.Kubernetes,
+                    policy=policy,
+                )
+
+            if schedule is not None:
+                self._api_client.set_schedule(
+                    identifier=item.identifier,
+                    provider=Provider.Kubernetes,
+                    schedule=schedule,
+                )
 
             resource = self._api_client.get_resource(identifier=item.identifier)
             resource_lines = resource_to_str(resource)
@@ -352,7 +377,7 @@ class KeelTelegramBot:
         # then fuzzy match to "identifier"
         await self._response_handler.await_user_selection(
             update, context, identifier, choices=items, key=lambda x: x.identifier,
-            callback=execute, callback_data={"count": count}
+            callback=execute
         )
 
     @COMMAND_TIME_APPROVE.time()
