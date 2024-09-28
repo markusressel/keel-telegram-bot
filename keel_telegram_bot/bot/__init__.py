@@ -10,6 +10,7 @@ from telegram.ext import CommandHandler, filters, MessageHandler, CallbackQueryH
     ApplicationBuilder, ContextTypes
 from telegram_click.argument import Argument, Flag, Selection
 from telegram_click.decorator import command
+from telegram_click.error_handler import DefaultErrorHandler
 
 from keel_telegram_bot import util
 from keel_telegram_bot.bot.permissions import CONFIG_ADMINS, CONFIGURED_CHAT_ID
@@ -24,6 +25,12 @@ from keel_telegram_bot.stats import *
 from keel_telegram_bot.util import send_message, approval_to_str, resource_to_str, tracked_image_to_str
 
 LOGGER = logging.getLogger(__name__)
+
+
+class CustomErrorHandler(DefaultErrorHandler):
+
+    def __init__(self):
+        super().__init__(silent_denial=True, print_error=True)
 
 
 class KeelTelegramBot:
@@ -152,6 +159,7 @@ class KeelTelegramBot:
                           example="10", optional=True, default=10),
                  Flag(name=["tracked", "t"], description="Only list tracked resources"),
              ],
+             error_handler=CustomErrorHandler(),
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _list_resources_callback(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE,
@@ -203,6 +211,7 @@ class KeelTelegramBot:
                  Argument(name=["limit", "l"], description="Limit the number of entries", type=int,
                           example="10", optional=True, default=10),
              ],
+             error_handler=CustomErrorHandler(),
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _list_tracked_callback(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE,
@@ -252,6 +261,7 @@ class KeelTelegramBot:
                  Flag(name=["approved", "a"], description="Include approved items"),
                  Flag(name=["rejected", "r"], description="Include rejected items"),
              ],
+             error_handler=CustomErrorHandler(),
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _list_approvals_callback(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE,
@@ -327,6 +337,7 @@ class KeelTelegramBot:
                            type=Trigger, converter=lambda x: Trigger.from_value(x),
                            allowed_values=[Trigger.Default, Trigger.Poll, Trigger.Approval], optional=True),
              ],
+             error_handler=CustomErrorHandler(),
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _set_approval_count_callback(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE,
@@ -400,6 +411,7 @@ class KeelTelegramBot:
                           example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
+             error_handler=CustomErrorHandler(),
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _approve_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
                                 identifier: str, voter: str or None) -> None:
@@ -444,6 +456,7 @@ class KeelTelegramBot:
                           example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
+             error_handler=CustomErrorHandler(),
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _reject_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
                                identifier: str, voter: str or None) -> None:
@@ -489,6 +502,7 @@ class KeelTelegramBot:
                           example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
              ],
+             error_handler=CustomErrorHandler(),
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _delete_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
                                identifier: str, voter: str or None) -> None:
@@ -528,6 +542,7 @@ class KeelTelegramBot:
     @command(
         name=COMMAND_STATS,
         description="Print keel statistics.",
+        error_handler=CustomErrorHandler(),
         permissions=CONFIG_ADMINS,
     )
     async def _stats_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -605,6 +620,7 @@ class KeelTelegramBot:
     @command(
         name=COMMAND_CONFIG,
         description="Print bot config.",
+        error_handler=CustomErrorHandler(),
         permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS,
     )
     async def _config_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -617,6 +633,7 @@ class KeelTelegramBot:
     @command(
         name=COMMAND_HELP,
         description="List commands supported by this bot.",
+        error_handler=CustomErrorHandler(),
         permissions=CONFIG_ADMINS,
     )
     async def _help_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -633,6 +650,7 @@ class KeelTelegramBot:
     @command(
         name=COMMAND_CHATID,
         description="Print chat ID.",
+        error_handler=CustomErrorHandler(),
         permissions=CONFIG_ADMINS,
     )
     async def _chatid_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -646,6 +664,7 @@ class KeelTelegramBot:
     @command(
         name=COMMAND_VERSION,
         description="Print bot version.",
+        error_handler=CustomErrorHandler(),
         permissions=CONFIG_ADMINS,
     )
     async def _version_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
