@@ -78,12 +78,12 @@ def timedelta_to_golang_duration(td: timedelta) -> str:
     parts = []
     for unit_name, unit_seconds in units:
         unit_value = int(total_seconds // unit_seconds)
-        if unit_value > 0 or unit_seconds < 1:
+        if unit_value > 0:  # Omit zero values
             parts.append(f"{unit_value}{unit_name}")
-            total_seconds -= unit_value * unit_seconds
+        total_seconds -= unit_value * unit_seconds
 
         # Handle fractional parts for milliseconds, microseconds, and nanoseconds
-        if unit_seconds < 1 and total_seconds < unit_seconds:
+        if 1 > unit_seconds > total_seconds:
             fractional_value = int(round(total_seconds / unit_seconds))
             if fractional_value > 0:
                 parts.append(f"{fractional_value}{unit_name}")
