@@ -78,6 +78,7 @@ class ReplyKeyboardHandler:
         keyboard_texts = list(map(lambda x: "{}".format(key(x[0])), fuzzy_matches))
         keyboard = self.build_reply_keyboard(keyboard_texts)
         text = "No unique perfect match found, please select one of the menu options"
+        # TODO: this should use a "real" awaitable function that does not block, to be able to bubble up exceptions within the callback
         self.await_response(
             user_id=user_id,
             options=keyboard_texts,
