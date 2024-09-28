@@ -222,6 +222,8 @@ class KeelApiClient:
 
         response = method.method(url, headers=headers, auth=self._auth, json=json, timeout=REQUESTS_TIMEOUT)
 
+        if response.status_code >= 400:
+            LOGGER.debug("Request to %s returned status code %s: %s", url, response.status_code, response.text)
         response.raise_for_status()
         # some responses do not return data so we just ignore the body in that case
         if len(response.content) > 0 and response.content != b"null":
