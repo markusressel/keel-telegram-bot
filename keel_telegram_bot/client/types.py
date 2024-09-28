@@ -29,10 +29,10 @@ class PollSchedule:
 
     @property
     def value(self):
-        return self.__str__()
+        return f"{timedelta_to_golang_duration(self.interval)}"
 
     def __str__(self):
-        return f"@every {timedelta_to_golang_duration(self.interval)}"
+        return f"@every {self.value}"
 
 
 class Action(enum.Enum):
@@ -132,6 +132,7 @@ class NeverPolicy(Policy):
 
     def __str__(self):
         return "never"
+
 
 class SemverPolicyType(enum.Enum):
     """
