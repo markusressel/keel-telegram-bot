@@ -66,9 +66,9 @@ class KeelTelegramBot:
                 CommandHandler(COMMAND_LIST_APPROVALS,
                                filters=(~ filters.REPLY) & (~ filters.FORWARDED),
                                callback=self._list_approvals_callback),
-                CommandHandler(COMMAND_SET_APPROVAL_COUNT,
+                CommandHandler(COMMAND_UPDATE,
                                filters=(~ filters.REPLY) & (~ filters.FORWARDED),
-                               callback=self._set_approval_count_callback),
+                               callback=self._update_callback),
                 CommandHandler(COMMAND_APPROVE,
                                filters=(~ filters.REPLY) & (~ filters.FORWARDED),
                                callback=self._approve_callback),
@@ -321,9 +321,9 @@ class KeelTelegramBot:
         text = "\n\n".join(lines).strip()
         await send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode="HTML")
 
-    @COMMAND_TIME_SET_APPROVAL_COUNT.time()
-    @command(name=COMMAND_SET_APPROVAL_COUNT,
-             description="Set the approval count for a resource",
+    @COMMAND_TIME_UPDATE.time()
+    @command(name=COMMAND_UPDATE,
+             description="Update the properties of a resource",
              arguments=[
                  Argument(name=["identifier", "i"], description="Resource identifier",
                           example="daemonset/docker-proxy/docker-proxy"),
@@ -339,7 +339,7 @@ class KeelTelegramBot:
              ],
              error_handler=CustomErrorHandler(),
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
-    async def _set_approval_count_callback(
+    async def _update_callback(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE,
         identifier: str,
         count: int or None,
@@ -353,6 +353,12 @@ class KeelTelegramBot:
         bot = context.bot
         message = update.effective_message
         chat_id = update.effective_chat.id
+
+        # NOTE: validation needs to happen before entering the keyboard callback, because errors in the keyboard callback
+        # are currently not propagated properly.
+        if schedule is not None:
+            if trigger is None:
+                raise ValueError("Cannot set schedule without trigger")
 
         async def execute(update: Update, context: ContextTypes.DEFAULT_TYPE, item: Resource, data: dict):
             bot = context.bot
@@ -372,9 +378,6 @@ class KeelTelegramBot:
                 )
 
             if schedule is not None:
-                if trigger is None:
-                    raise ValueError("Cannot set schedule without trigger")
-
                 self._api_client.set_schedule(
                     identifier=item.identifier,
                     schedule=schedule,
