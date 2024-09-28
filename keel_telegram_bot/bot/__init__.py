@@ -361,16 +361,20 @@ class KeelTelegramBot:
                 )
 
             if schedule is not None:
+                if trigger is None:
+                    raise ValueError("Cannot set schedule without trigger")
+
                 self._api_client.set_schedule(
                     identifier=item.identifier,
                     schedule=schedule,
-                )
-
-            if trigger is not None:
-                self._api_client.set_trigger(
-                    identifier=item.identifier,
                     trigger=trigger,
                 )
+            else:
+                if trigger is not None:
+                    self._api_client.set_trigger(
+                        identifier=item.identifier,
+                        trigger=trigger,
+                    )
 
             resource = self._api_client.get_resource(identifier=item.identifier)
             resource_lines = resource_to_str(resource)

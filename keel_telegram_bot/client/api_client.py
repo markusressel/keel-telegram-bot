@@ -115,18 +115,14 @@ class KeelApiClient:
             "policy": policy.value,
         })
 
-    def set_schedule(self, identifier: str, schedule: PollSchedule) -> None:
+    def set_schedule(self, identifier: str, schedule: PollSchedule, trigger: Trigger) -> None:
         """
         Set the polling schedule for an image
         :param identifier: the identifier of the image
         :param schedule: the schedule of the image
         """
         resource = self.get_resource(identifier)
-        self._do_request(HttpMethod.PUT, self._base_url + "/v1/tracked", json={
-            "identifier": identifier,
-            "provider": resource.provider.value,
-            "schedule": schedule.value,
-        })
+        self.set_tracked(identifier, resource.provider, trigger, schedule)
 
     def set_trigger(self, identifier: str, trigger: Trigger) -> None:
         """
