@@ -162,7 +162,7 @@ class SemverPolicy(Policy):
         return SemverPolicy(SemverPolicyType.NNone)
 
     def __str__(self):
-        return self._policy_type.__str__()
+        return self._policy_type.value
 
 
 class GlobPolicy(Policy):
