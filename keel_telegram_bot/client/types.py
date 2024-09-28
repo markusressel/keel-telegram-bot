@@ -27,6 +27,7 @@ class PollSchedule:
         duration = parse_golang_duration(value.strip())
         return PollSchedule(duration)
 
+    @property
     def value(self):
         return self.__str__()
 
