@@ -1,3 +1,4 @@
+from keel_telegram_bot.client import parse_golang_duration, timedelta_to_golang_duration
 from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.client.resource import Resource
 from keel_telegram_bot.util import approval_to_str, resource_to_str
@@ -8,6 +9,14 @@ class DummyTest(TestBase):
 
     def test_dummy(self):
         self.assertTrue(True)
+
+    def test_parse_golang_duration(self):
+        duration = parse_golang_duration("24h")
+        print(duration)
+
+        golang_duration_str = timedelta_to_golang_duration(duration)
+        print(golang_duration_str)
+
 
     def test_approval_format(self):
         approval = Approval.from_dict({

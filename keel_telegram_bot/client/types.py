@@ -24,7 +24,7 @@ class PollSchedule:
         """
         if value.startswith("@every "):
             value = value.split(" ")[1]
-        duration = parse_golang_duration(value)
+        duration = parse_golang_duration(value.strip())
         return PollSchedule(duration)
 
     def value(self):
@@ -55,7 +55,7 @@ class Provider(enum.Enum):
     Helm = "helm"
 
     @staticmethod
-    def from_value(value: str):
+    def from_value(value: str) -> "Provider" or None:
         """
         Get the enum from a value
         :param value: the value to convert
@@ -64,7 +64,7 @@ class Provider(enum.Enum):
         for provider in Provider:
             if provider.value.lower() == value.lower():
                 return provider
-        raise Exception(f"Unknown provider value: {value}")
+        return None
 
     def __str__(self):
         return self.value
@@ -82,7 +82,7 @@ class Trigger(enum.Enum):
     Approval = "approval"
 
     @staticmethod
-    def from_value(value: str):
+    def from_value(value: str) -> "Trigger" or None:
         """
         Get the enum from a value
         :param value: the value to convert
@@ -91,7 +91,7 @@ class Trigger(enum.Enum):
         for trigger in Trigger:
             if trigger.value.lower() == value.lower():
                 return trigger
-        raise Exception(f"Unknown trigger value: {value}")
+        return None
 
     def __str__(self):
         return self.value
