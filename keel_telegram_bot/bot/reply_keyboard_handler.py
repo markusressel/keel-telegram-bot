@@ -89,7 +89,6 @@ class ReplyKeyboardHandler:
                 "callback_data": callback_data,
             })
         await send_message(bot, chat_id, text, parse_mode="MARKDOWN", reply_to=message_id, menu=keyboard)
-        self.awaiting_response[user_id] = self.awaiting_response[user_id]["popup_sent"] = True
 
     def await_response(self, user_id: str, options: List[str], callback_data: dict, callback):
         """
@@ -100,11 +99,11 @@ class ReplyKeyboardHandler:
         :param callback_data: data to pass to callback
         """
         if user_id in self.awaiting_response:
-            if self.awaiting_response.get(user_id, {}).get("popup_sent", False):
-                raise AssertionError("Already awaiting response to a previous query from user {}".format(user_id))
+            LOGGER.warning(
+                "Already awaiting response to a previous query from user {}, clearing old request.".format(user_id))
+            self.awaiting_response.pop(user_id)
 
         self.awaiting_response[user_id] = {
-            "popup_sent": False,
             "valid_responses": options,
             "callback": callback,
             "callback_data": callback_data
