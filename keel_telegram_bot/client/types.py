@@ -105,14 +105,18 @@ class Policy(ABC):
         elif value.startswith("regexp:"):
             return RegexPolicy(re.compile(value[7:], re.IGNORECASE))
         else:
-            return SemverPolicyType.from_value(value)
+            return SemverPolicy.from_value(value)
+
+    @property
+    def value(self):
+        return self.__str__()
 
     @abc.abstractmethod
     def __str__(self):
         raise NotImplementedError()
 
 
-class SemverPolicyType(Policy):
+class SemverPolicyType(enum.Enum):
     """
     Enum for semver policy types
     """
@@ -123,16 +127,14 @@ class SemverPolicyType(Policy):
     Patch = "patch"
     Force = "force"
 
-    @staticmethod
-    def values() -> ["SemverPolicyType"]:
-        return [
-            SemverPolicyType.NNone,
-            SemverPolicyType.All,
-            SemverPolicyType.Major,
-            SemverPolicyType.Minor,
-            SemverPolicyType.Patch,
-            SemverPolicyType.Force
-        ]
+
+class SemverPolicy(Policy):
+    """
+    Enum for semver policy types
+    """
+
+    def __init__(self, policy_type: SemverPolicyType):
+        self._policy_type = policy_type
 
     @staticmethod
     def from_value(value: str):
@@ -141,13 +143,13 @@ class SemverPolicyType(Policy):
         :param value: the value to convert
         :return: the enum
         """
-        for policy in SemverPolicyType.values():
+        for policy in SemverPolicyType:
             if policy.value.lower() == value.lower():
                 return policy
-        return SemverPolicyType.NNone
+        return SemverPolicy(SemverPolicyType.NNone)
 
     def __str__(self):
-        return self.value
+        return self._policy_type.__str__()
 
 
 class GlobPolicy(Policy):
