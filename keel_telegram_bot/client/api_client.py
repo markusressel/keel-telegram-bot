@@ -96,10 +96,10 @@ class KeelApiClient:
         :param identifier: the identifier of the image
         :param votes_required: the required approvals count
         """
-        tracked_image = self.get_tracked_image(identifier)
+        resource = self.get_resource(identifier)
         self._do_request(HttpMethod.PUT, self._base_url + "/v1/approvals", json={
             "identifier": identifier,
-            "provider": tracked_image.provider.value,
+            "provider": resource.provider.value,
             "votesRequired": votes_required,
         })
 
@@ -109,10 +109,10 @@ class KeelApiClient:
         :param identifier: the identifier of the image
         :param policy: the policy of the image
         """
-        tracked_image = self.get_tracked_image(identifier)
+        resource = self.get_resource(identifier)
         self._do_request(HttpMethod.PUT, self._base_url + "/v1/policies", json={
             "identifier": identifier,
-            "provider": tracked_image.provider.value,
+            "provider": resource.provider.value,
             "policy": policy.value,
         })
 
@@ -122,8 +122,8 @@ class KeelApiClient:
         :param identifier: the identifier of the image
         :param schedule: the schedule of the image
         """
-        tracked_image = self.get_tracked_image(identifier)
-        self.set_tracked(identifier, tracked_image.provider, tracked_image.trigger, schedule)
+        resource = self.get_resource(identifier)
+        self.set_tracked(identifier, resource.provider, resource.trigger, schedule)
 
     def set_trigger(self, identifier: str, trigger: Trigger) -> None:
         """
@@ -131,8 +131,8 @@ class KeelApiClient:
         :param identifier: the identifier of the image
         :param trigger: the trigger of the image
         """
-        tracked_image = self.get_tracked_image(identifier)
-        self.set_tracked(identifier, tracked_image.provider, trigger, tracked_image.schedule)
+        resource = self.get_resource(identifier)
+        self.set_tracked(identifier, resource.provider, trigger, resource.schedule)
 
     def get_approvals(self, rejected: bool = None, archived: bool = None) -> List[Approval]:
         """
