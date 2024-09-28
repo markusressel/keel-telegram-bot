@@ -357,7 +357,6 @@ class KeelTelegramBot:
             if policy is not None:
                 self._api_client.set_policy(
                     identifier=item.identifier,
-                    provider=Provider.Kubernetes,
                     policy=policy,
                 )
 
@@ -370,7 +369,6 @@ class KeelTelegramBot:
             if trigger is not None:
                 self._api_client.set_trigger(
                     identifier=item.identifier,
-                    provider=Provider.Kubernetes,
                     trigger=trigger,
                 )
 

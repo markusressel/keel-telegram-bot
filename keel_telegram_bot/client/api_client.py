@@ -89,30 +89,30 @@ class KeelApiClient:
         })
 
     def set_required_approvals_count(
-        self, identifier: str, provider: Provider, votes_required: int
+        self, identifier: str, votes_required: int
     ) -> None:
         """
         Set the required approvals count for an image
         :param identifier: the identifier of the image
-        :param provider: the name of the voter
         :param votes_required: the required approvals count
         """
+        tracked_image = self.get_tracked_image(identifier)
         self._do_request(HttpMethod.PUT, self._base_url + "/v1/approvals", json={
             "identifier": identifier,
-            "provider": provider.value,
+            "provider": tracked_image.provider.value,
             "votesRequired": votes_required,
         })
 
-    def set_policy(self, identifier: str, provider: Provider, policy: Policy) -> None:
+    def set_policy(self, identifier: str, policy: Policy) -> None:
         """
         Set the policy for an image
         :param identifier: the identifier of the image
-        :param provider: the provider of the image
         :param policy: the policy of the image
         """
+        tracked_image = self.get_tracked_image(identifier)
         self._do_request(HttpMethod.PUT, self._base_url + "/v1/policies", json={
             "identifier": identifier,
-            "provider": provider.value,
+            "provider": tracked_image.provider.value,
             "policy": policy.value,
         })
 
@@ -125,14 +125,14 @@ class KeelApiClient:
         tracked_image = self.get_tracked_image(identifier)
         self.set_tracked(identifier, tracked_image.provider, tracked_image.trigger, schedule)
 
-    def set_trigger(self, identifier: str, provider: Provider, trigger: Trigger) -> None:
+    def set_trigger(self, identifier: str, trigger: Trigger) -> None:
         """
         Set the trigger for an image
         :param identifier: the identifier of the image
-        :param provider: the provider of the image
         :param trigger: the trigger of the image
         """
-        self.set_tracked(identifier, provider, trigger, None)
+        tracked_image = self.get_tracked_image(identifier)
+        self.set_tracked(identifier, tracked_image.provider, trigger, tracked_image.schedule)
 
     def get_approvals(self, rejected: bool = None, archived: bool = None) -> List[Approval]:
         """
