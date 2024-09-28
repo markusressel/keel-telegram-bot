@@ -18,7 +18,7 @@ from keel_telegram_bot.client.api_client import KeelApiClient
 from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.client.resource import Resource
 from keel_telegram_bot.client.tracked_image import TrackedImage
-from keel_telegram_bot.client.types import SemverPolicy, Provider, Policy, PollSchedule, SemverPolicyType, Trigger
+from keel_telegram_bot.client.types import SemverPolicy, Policy, PollSchedule, SemverPolicyType, Trigger
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.stats import *
 from keel_telegram_bot.util import send_message, approval_to_str, resource_to_str, tracked_image_to_str
@@ -351,7 +351,6 @@ class KeelTelegramBot:
             if count is not None:
                 self._api_client.set_required_approvals_count(
                     identifier=item.identifier,
-                    provider=Provider.Kubernetes,
                     votes_required=count,
                 )
 
