@@ -160,4 +160,4 @@ class RegexPolicy(Policy):
         self._pattern = pattern
 
     def __str__(self):
-        return f"regexp:{self._pattern}"
+        return f"regexp:{self._pattern.pattern}"
