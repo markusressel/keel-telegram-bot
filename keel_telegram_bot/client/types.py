@@ -71,8 +71,11 @@ class Trigger(enum.Enum):
     """
     Enum for trigger types
     """
+    # Default means there is no polling.
     Default = "default"
+    # Poll means the latest image version is polled regularly, based on the set pollSchedule.
     Poll = "poll"
+    # TODO: figure out what this is for
     Approval = "approval"
 
     @staticmethod
@@ -104,6 +107,8 @@ class Policy(ABC):
             return GlobPolicy(value[5:])
         elif value.startswith("regexp:"):
             return RegexPolicy(re.compile(value[7:], re.IGNORECASE))
+        elif value == "never":
+            return NeverPolicy()
         else:
             return SemverPolicy.from_value(value)
 
@@ -115,6 +120,14 @@ class Policy(ABC):
     def __str__(self):
         raise NotImplementedError()
 
+
+class NeverPolicy(Policy):
+    """
+    Policy for never matching
+    """
+
+    def __str__(self):
+        return "never"
 
 class SemverPolicyType(enum.Enum):
     """

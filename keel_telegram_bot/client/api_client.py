@@ -117,6 +117,15 @@ class KeelApiClient:
             "schedule": schedule,
         })
 
+    def set_trigger(self, identifier: str, provider: Provider, trigger: Trigger) -> None:
+        """
+        Set the trigger for an image
+        :param identifier: the identifier of the image
+        :param provider: the provider of the image
+        :param trigger: the trigger of the image
+        """
+        self.set_tracked(identifier, provider, trigger, None)
+
     def get_approvals(self, rejected: bool = None, archived: bool = None) -> List[Approval]:
         """
         :param rejected: True for rejected, False for approved, None for all

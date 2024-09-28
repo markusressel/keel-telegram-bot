@@ -8,7 +8,7 @@ from requests import HTTPError
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 from telegram.ext import CommandHandler, filters, MessageHandler, CallbackQueryHandler, \
     ApplicationBuilder, ContextTypes
-from telegram_click.argument import Argument, Flag
+from telegram_click.argument import Argument, Flag, Selection
 from telegram_click.decorator import command
 
 from keel_telegram_bot import util
@@ -18,7 +18,7 @@ from keel_telegram_bot.client.api_client import KeelApiClient
 from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.client.resource import Resource
 from keel_telegram_bot.client.tracked_image import TrackedImage
-from keel_telegram_bot.client.types import SemverPolicy, Provider, Policy, PollSchedule, SemverPolicyType
+from keel_telegram_bot.client.types import SemverPolicy, Provider, Policy, PollSchedule, SemverPolicyType, Trigger
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.stats import *
 from keel_telegram_bot.util import send_message, approval_to_str, resource_to_str, tracked_image_to_str
@@ -321,7 +321,10 @@ class KeelTelegramBot:
                           converter=lambda x: Policy.from_value(x), optional=True),
                  Argument(name=["schedule", "s"], description="Schedule to use for polling image versions",
                           example="24h", type=PollSchedule,
-                          converter=lambda x: PollSchedule.from_value(x), optional=True)
+                          converter=lambda x: PollSchedule.from_value(x), optional=True),
+                 Selection(name=["trigger", "t"], description="Trigger to use for polling image versions",
+                           type=Trigger, converter=lambda x: Trigger.from_value(x),
+                           allowed_values=[Trigger.Default, Trigger.Poll, Trigger.Approval], optional=True),
              ],
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _set_approval_count_callback(
@@ -330,6 +333,7 @@ class KeelTelegramBot:
         count: int or None,
         policy: Policy or None,
         schedule: PollSchedule or None,
+        trigger: Trigger or None,
     ) -> None:
         """
         Set the required approval count for a resource
@@ -362,6 +366,13 @@ class KeelTelegramBot:
                     identifier=item.identifier,
                     provider=Provider.Kubernetes,
                     schedule=schedule,
+                )
+
+            if trigger is not None:
+                self._api_client.set_trigger(
+                    identifier=item.identifier,
+                    provider=Provider.Kubernetes,
+                    trigger=trigger,
                 )
 
             resource = self._api_client.get_resource(identifier=item.identifier)
