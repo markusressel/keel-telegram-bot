@@ -61,7 +61,8 @@ class KeelApiClient:
         result = [TrackedImage.from_dict(tracked) for tracked in response]
         return result
 
-    def set_tracked(self, identifier: str, provider: Provider, trigger: Trigger, schedule: str or None) -> None:
+    def set_tracked(self, identifier: str, provider: Provider, trigger: Trigger,
+                    schedule: PollSchedule or None) -> None:
         """
         Set the tracking properties for an image
         :param identifier: the identifier of the image
@@ -71,9 +72,9 @@ class KeelApiClient:
         """
         self._do_request(HttpMethod.PUT, self._base_url + "/v1/tracked", json={
             "identifier": identifier,
-            "provider": provider,
-            "trigger": trigger,
-            "schedule": schedule,
+            "provider": provider.value,
+            "trigger": trigger.value,
+            "schedule": schedule.value,
         })
 
     def set_required_approvals_count(
@@ -87,7 +88,7 @@ class KeelApiClient:
         """
         self._do_request(HttpMethod.PUT, self._base_url + "/v1/approvals", json={
             "identifier": identifier,
-            "provider": provider,
+            "provider": provider.value,
             "votesRequired": votes_required,
         })
 
@@ -100,8 +101,8 @@ class KeelApiClient:
         """
         self._do_request(HttpMethod.PUT, self._base_url + "/v1/policies", json={
             "identifier": identifier,
-            "provider": provider,
-            "policy": policy,
+            "provider": provider.value,
+            "policy": policy.value,
         })
 
     def set_schedule(self, identifier: str, provider: Provider, schedule: PollSchedule) -> None:
@@ -113,8 +114,8 @@ class KeelApiClient:
         """
         self._do_request(HttpMethod.PUT, self._base_url + "/v1/schedule", json={
             "identifier": identifier,
-            "provider": provider,
-            "schedule": schedule,
+            "provider": provider.value,
+            "schedule": schedule.value,
         })
 
     def set_trigger(self, identifier: str, provider: Provider, trigger: Trigger) -> None:
@@ -181,7 +182,7 @@ class KeelApiClient:
             "id": id,
             "identifier": identifier,
             "voter": voter,
-            "action": action,
+            "action": action.value,
         })
 
     def get_stats(self) -> DailyStats:

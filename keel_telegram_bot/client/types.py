@@ -27,6 +27,9 @@ class PollSchedule:
         duration = parse_golang_duration(value)
         return PollSchedule(duration)
 
+    def value(self):
+        return self.__str__()
+
     def __str__(self):
         return f"@every {timedelta_to_golang_duration(self.interval)}"
 
