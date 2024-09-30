@@ -28,7 +28,7 @@ RUN apt-get update \
 ENV PATH="${VENV_HOME}/bin:${PATH}"
 
 COPY keel_telegram_bot keel_telegram_bot
-COPY README.md README.md
+COPY README.md keel_telegram_bot/README.md
 
 RUN ${VENV_HOME}/bin/pip install .
 
