@@ -790,6 +790,13 @@ class KeelTelegramBot:
         approvals = self._api_client.get_approvals()
 
         for approval in approvals:
+
+            if approval.archived or approval.rejected:
+                # TODO: avoid updating archived (accepted) or rejected items
+                # to reduce the number of API calls to the Telegram API
+                pass
+                #continue
+
             approval_id = approval.id
             approval_identifier = approval.identifier
             key = f"{approval_id}_{approval_identifier}"
