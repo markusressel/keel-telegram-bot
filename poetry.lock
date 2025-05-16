@@ -1150,14 +1150,14 @@ Levenshtein = "0.27.1"
 
 [[package]]
 name = "python-telegram-bot"
-version = "22.0"
+version = "22.1"
 description = "We have made you a wrapper you can't refuse"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "python_telegram_bot-22.0-py3-none-any.whl", hash = "sha256:23237f778655e634f08cfebbada96ed3692c2bdd3c20c122e90a6d606d6a4516"},
-    {file = "python_telegram_bot-22.0.tar.gz", hash = "sha256:acf86f28d86d81cab736177d2988e5bcb27f2248137efd62e02c46e9ba1fe44c"},
+    {file = "python_telegram_bot-22.1-py3-none-any.whl", hash = "sha256:71afd091fde9037ac44728c2768eb958682140dcc350900a191da0e9cef319d3"},
+    {file = "python_telegram_bot-22.1.tar.gz", hash = "sha256:b6c7fc1f3635cef6aff0c431827407cafde183e7e1992060edeacc2bf08d23d8"},
 ]
 
 [package.dependencies]
