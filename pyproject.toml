@@ -45,7 +45,7 @@ prometheus_async = "*"
 fuzzywuzzy = "*"
 python-Levenshtein = "*"
 
-[tool.poetry.dev-dependencies]
+[poetry.group.dev.dependencies]
 pytest = "*"
 
 [tool.pytest.ini_options]
