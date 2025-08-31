@@ -1,7 +1,7 @@
 FROM python:3.12-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1
-ENV POETRY_VERSION="1.8.3"
+ENV POETRY_VERSION="2.1.4"
 ENV PIP_DISABLE_PIP_VERSION_CHECK=on
 ENV VENV_HOME=/opt/poetry
 WORKDIR /app
@@ -13,7 +13,13 @@ WORKDIR /app
 #        gcc \
 #        python3-levenshtein
 
+# Add Poetry to PATH
+ENV PATH="${VENV_HOME}/bin:${PATH}"
+
 COPY README.md poetry.lock pyproject.toml ./
+COPY keel_telegram_bot keel_telegram_bot
+COPY README.md keel_telegram_bot/README.md
+
 RUN apt-get update \
  && apt-get -y install python3-pip \
  && apt-get clean && rm -rf /var/lib/apt/lists/* \
@@ -23,13 +29,5 @@ RUN apt-get update \
  && ${VENV_HOME}/bin/poetry check \
  && POETRY_VIRTUALENVS_CREATE=false ${VENV_HOME}/bin/poetry install --no-interaction --no-cache --only main \
  && ${VENV_HOME}/bin/pip uninstall -y poetry
-
-# Add Poetry to PATH
-ENV PATH="${VENV_HOME}/bin:${PATH}"
-
-COPY keel_telegram_bot keel_telegram_bot
-COPY README.md keel_telegram_bot/README.md
-
-RUN ${VENV_HOME}/bin/pip install .
 
 ENTRYPOINT [ "keel-telegram-bot" ]
