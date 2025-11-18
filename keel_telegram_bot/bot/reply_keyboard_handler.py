@@ -1,5 +1,5 @@
 import logging
-from typing import List, Any
+from typing import List, Any, Optional, Callable, Dict
 
 from telegram import Update, ReplyKeyboardRemove, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import CallbackContext
@@ -48,8 +48,8 @@ class ReplyKeyboardHandler:
                                         data["callback"], data["callback_data"])
 
     async def await_user_selection(self, update: Update, context: CallbackContext,
-                                   selection: str or None, choices: List[Any], key: callable,
-                                   callback: callable, callback_data: dict = None):
+                                   selection: Optional[str], choices: List[Any], key: Callable,
+                                   callback: Callable, callback_data: Optional[Dict] = None):
         """
         Sends a ReplyKeyboard to the user and waits for a valid selection.
         :param update: Update

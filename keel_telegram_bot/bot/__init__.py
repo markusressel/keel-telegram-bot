@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import re
-from typing import Dict
+from typing import Dict, Optional
 
 from container_app_conf.formatter.toml import TomlFormatter
 from requests import HTTPError
@@ -163,7 +163,7 @@ class KeelTelegramBot:
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _list_resources_callback(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE,
-        glob: str or None,
+        glob: Optional[str],
         limit: int,
         tracked: bool,
     ) -> None:
@@ -177,7 +177,7 @@ class KeelTelegramBot:
         message = update.effective_message
         chat_id = update.effective_chat.id
 
-        def filter_resources_by(resources: List[Resource], glob: str or None, tracked: bool) -> List[Resource]:
+        def filter_resources_by(resources: List[Resource], glob: Optional[str], tracked: bool) -> List[Resource]:
             result = resources
             if glob is not None:
                 result = list(filter(
@@ -215,7 +215,7 @@ class KeelTelegramBot:
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _list_tracked_callback(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE,
-        glob: str or None,
+        glob: Optional[str],
         limit: int,
     ) -> None:
         """
@@ -228,7 +228,7 @@ class KeelTelegramBot:
         message = update.effective_message
         chat_id = update.effective_chat.id
 
-        def filter_tracked_images_by(images: List[TrackedImage], glob: str or None) -> List[TrackedImage]:
+        def filter_tracked_images_by(images: List[TrackedImage], glob: Optional[str]) -> List[TrackedImage]:
             result = images
             if glob is not None:
                 result = list(filter(
@@ -342,10 +342,10 @@ class KeelTelegramBot:
     async def _update_callback(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE,
         identifier: str,
-        count: int or None,
-        policy: Policy or None,
-        schedule: PollSchedule or None,
-        trigger: Trigger or None,
+        count: Optional[int],
+        policy: Optional[Policy],
+        schedule: Optional[PollSchedule],
+        trigger: Optional[Trigger],
     ) -> None:
         """
         Set the required approval count for a resource
@@ -417,7 +417,7 @@ class KeelTelegramBot:
              error_handler=CustomErrorHandler(),
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _approve_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
-                                identifier: str, voter: str or None) -> None:
+                                identifier: str, voter: Optional[str]) -> None:
         """
         Approve a pending item
         """
@@ -462,7 +462,7 @@ class KeelTelegramBot:
              error_handler=CustomErrorHandler(),
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _reject_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
-                               identifier: str, voter: str or None) -> None:
+                               identifier: str, voter: Optional[str]) -> None:
         """
         Reject a pending item
         """
@@ -508,7 +508,7 @@ class KeelTelegramBot:
              error_handler=CustomErrorHandler(),
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _delete_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
-                               identifier: str, voter: str or None) -> None:
+                               identifier: str, voter: Optional[str]) -> None:
         """
         Delete an archived item
         """
