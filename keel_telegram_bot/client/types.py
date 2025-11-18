@@ -3,6 +3,7 @@ import enum
 import re
 from abc import ABC
 from datetime import timedelta
+from typing import Optional
 
 from keel_telegram_bot.client import parse_golang_duration, timedelta_to_golang_duration
 
@@ -56,7 +57,7 @@ class Provider(enum.Enum):
     Helm = "helm"
 
     @staticmethod
-    def from_value(value: str) -> "Provider" or None:
+    def from_value(value: str) -> Optional["Provider"]:
         """
         Get the enum from a value
         :param value: the value to convert
@@ -83,7 +84,7 @@ class Trigger(enum.Enum):
     Approval = "approval"
 
     @staticmethod
-    def from_value(value: str) -> "Trigger" or None:
+    def from_value(value: str) -> Optional["Trigger"]:
         """
         Get the enum from a value
         :param value: the value to convert

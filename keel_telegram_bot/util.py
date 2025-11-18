@@ -3,7 +3,7 @@ import logging
 import operator
 import re
 from datetime import datetime, timezone, timedelta
-from typing import List, Any, Tuple, Dict
+from typing import List, Any, Tuple, Dict, Callable
 
 from telegram import Bot, Message, LinkPreviewOptions
 from telegram._utils.types import ReplyMarkup
@@ -55,7 +55,7 @@ async def send_message(
     bot: Bot, chat_id: str, message: str, parse_mode: str = None, reply_to: int = None,
     menu: ReplyMarkup = None,
     link_preview_options: LinkPreviewOptions = LinkPreviewOptions(is_disabled=True)
-) -> Message or List[Message]:
+) -> Message | List[Message]:
     """
     Sends a text message to the given chat
     :param bot: the bot
@@ -94,8 +94,9 @@ def fuzzy_match(term: str, choices: List[Any], limit: int = None, key=lambda x: 
     Does a fuzzy search on the given choices
     :param term: the search term
     :param choices: list of possible choices
-    :param key: function to turn a choice item into a string
     :param limit: Optional maximum for the number of elements returned
+    :param key: function to turn a choice item into a string
+    :param ignorecase: whether to ignore case when matching
     :return: List of (choice, ratio) tuples, sorted by descending ratio
     """
     # map choices to key
@@ -114,7 +115,7 @@ def fuzzy_match(term: str, choices: List[Any], limit: int = None, key=lambda x: 
     return result
 
 
-def filter_new_by_key(a: List, b: List, key: callable) -> List:
+def filter_new_by_key(a: List, b: List, key: Callable) -> List:
     """
     Returns a list of all items, that are new in b when compared to a,
     using the key function to determine a unique identifier for list items

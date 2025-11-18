@@ -1,7 +1,7 @@
 import enum
 import logging
 from collections import namedtuple
-from typing import List
+from typing import List, Optional
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -43,7 +43,7 @@ class KeelApiClient:
         result = [Resource.from_dict(resource) for resource in response]
         return result
 
-    def get_resource(self, identifier: str) -> Resource or None:
+    def get_resource(self, identifier: str) -> Optional[Resource]:
         """
         Returns a resource by identifier
         """
@@ -61,7 +61,7 @@ class KeelApiClient:
         result = [TrackedImage.from_dict(tracked) for tracked in response]
         return result
 
-    def get_tracked_image(self, namespace: str, image: str) -> TrackedImage or None:
+    def get_tracked_image(self, namespace: str, image: str) -> Optional[TrackedImage]:
         """
         Returns a list of all tracked images
         """
@@ -72,7 +72,7 @@ class KeelApiClient:
         return None
 
     def set_tracked(self, identifier: str, provider: Provider, trigger: Trigger,
-                    schedule: PollSchedule or None) -> None:
+                    schedule: Optional[PollSchedule]) -> None:
         """
         Set the tracking properties for an image
         :param identifier: the identifier of the image
@@ -120,6 +120,7 @@ class KeelApiClient:
         Set the polling schedule for an image
         :param identifier: the identifier of the image
         :param schedule: the schedule of the image
+        :param trigger: the trigger of the image
         """
         resource = self.get_resource(identifier)
         self.set_tracked(identifier, resource.provider, trigger, schedule)
@@ -202,10 +203,15 @@ class KeelApiClient:
         result = self._do_request(HttpMethod.GET, self._base_url + "/v1/stats")
         return DailyStats.from_dict(result)
 
-    def _do_request(self, method: HttpMethod = HttpMethod.GET, url: str = "/", params: dict = None,
-                    json: dict = None) -> list or dict or None:
+    def _do_request(
+        self,
+        method: HttpMethod = HttpMethod.GET,
+        url: str = "/",
+        params: dict = None,
+        json: dict = None
+    ) -> Optional[list | dict]:
         """
-        Executes a http request based on the given parameters
+        Executes an http request based on the given parameters
 
         :param method: the method to use (GET, PUT, POST)
         :param url: the url to use
@@ -224,6 +230,7 @@ class KeelApiClient:
         # some responses do not return data so we just ignore the body in that case
         if len(response.content) > 0 and response.content != b"null":
             return response.json()
+        return None
 
     @staticmethod
     def _create_request_url(url: str, params: dict = None):

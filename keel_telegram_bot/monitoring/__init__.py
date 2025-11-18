@@ -26,6 +26,7 @@ class RegularIntervalWorker:
             return await asyncio.Event().wait()
         else:
             LOGGER.debug("Already running, ignoring start() call")
+            return None
 
     def stop(self):
         """

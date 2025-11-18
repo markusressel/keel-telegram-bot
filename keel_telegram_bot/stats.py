@@ -1,3 +1,5 @@
+from typing import List
+
 from prometheus_client import Summary, Counter
 from prometheus_client.metrics import MetricWrapperBase
 
@@ -28,7 +30,7 @@ KEEL_APPROVAL_ACTION_COUNTER = Counter('keel_approval_action_counter',
                                        'Counts approval notificaion actions', ['action', 'identifier'])
 
 
-def get_metrics() -> []:
+def get_metrics() -> List:
     entries = set()
     for name, obj in globals().items():
         if isinstance(obj, MetricWrapperBase):
