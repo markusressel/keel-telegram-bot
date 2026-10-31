@@ -5,6 +5,7 @@ from unittest.mock import Mock, AsyncMock, MagicMock
 
 from keel_telegram_bot.bot import KeelTelegramBot
 from keel_telegram_bot.client.api_client import KeelApiClient
+from keel_telegram_bot.const import BUTTON_DATA_APPROVE, BUTTON_DATA_REJECT
 from keel_telegram_bot.helm.chart import HelmChart
 from keel_telegram_bot.helm.checker import HelmChartCheckResult, HelmChartUpdateChecker
 from keel_telegram_bot.helm.client import HelmChartClient
@@ -138,3 +139,29 @@ class HelmBotTest(TestBase):
             self.assertIn("not allowed", context.bot.answer_callback_query.call_args.kwargs["text"])
         self.client.get_helm_chart.assert_not_called()
         self.client.set_version.assert_not_called()
+
+    def _click_approval(self, data: str, username="myadminuser", chat_id=12345678):
+        update = MagicMock()
+        update.callback_query.data = data
+        update.callback_query.from_user.username = username
+        update.effective_chat.id = chat_id
+        update.effective_message.text = "Approval request\nId: abc\nIdentifier: deployment/default/app:1.2.3"
+        update.effective_message.edit_text = AsyncMock()
+        context = MagicMock()
+        context.bot.answer_callback_query = AsyncMock()
+        asyncio.run(self.bot._inline_keyboard_click_callback(update, context))
+        return update, context
+
+    def test_approve(self):
+        self._click_approval(BUTTON_DATA_APPROVE)
+
+        self.bot._api_client.approve.assert_called_once()
+        self.assertEqual(("abc", "deployment/default/app:1.2.3"), self.bot._api_client.approve.call_args.args[:2])
+
+    def test_approve_unauthorized(self):
+        for kwargs in [{"username": "someoneelse"}, {"chat_id": 999}]:
+            for data in [BUTTON_DATA_APPROVE, BUTTON_DATA_REJECT]:
+                _, context = self._click_approval(data, **kwargs)
+                self.assertIn("not allowed", context.bot.answer_callback_query.call_args.kwargs["text"])
+        self.bot._api_client.approve.assert_not_called()
+        self.bot._api_client.reject.assert_not_called()

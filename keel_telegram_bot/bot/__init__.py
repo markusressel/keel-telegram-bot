@@ -882,6 +882,11 @@ class KeelTelegramBot:
             matches = re.search(r"^Identifier: (.*)", message_text, flags=re.MULTILINE)
             approval_identifier = matches.group(1)
 
+            if not self._is_button_press_allowed(update) \
+                    or self._is_filtered_for(update.effective_chat.id, approval_identifier):
+                await bot.answer_callback_query(query_id, text="You are not allowed to do this")
+                return
+
             if data == BUTTON_DATA_APPROVE:
                 self._api_client.approve(approval_id, approval_identifier, from_user.full_name)
                 answer_text = f"Approved '{approval_identifier}'"
@@ -915,9 +920,7 @@ class KeelTelegramBot:
         chat_id = update.effective_chat.id
         from_user = query.from_user
 
-        # same rule as for the bot commands: configured chat and admin user
-        if str(chat_id) not in self._config.TELEGRAM_CHAT_IDS.value \
-                or from_user.username not in self._config.TELEGRAM_ADMIN_USERNAMES.value:
+        if not self._is_button_press_allowed(update):
             await bot.answer_callback_query(query_id, text="You are not allowed to do this")
             return
 
@@ -1107,6 +1110,16 @@ class KeelTelegramBot:
 
                 for failure in failed_messages:
                     message_ids.remove(failure)
+
+    def _is_button_press_allowed(self, update: Update) -> bool:
+        """
+        Same rule as for the bot commands: configured chat and admin user. The user is the one who
+        pressed the button (callback_query.from_user); effective_message.from_user is the bot itself.
+        """
+        chat_id = update.effective_chat.id
+        username = update.callback_query.from_user.username
+        return str(chat_id) in self._config.TELEGRAM_CHAT_IDS.value \
+            and username in self._config.TELEGRAM_ADMIN_USERNAMES.value
 
     def _is_filtered_for(self, chat_id: str | int, identifier: str) -> bool:
         chat_ids: List[str] = self._config.TELEGRAM_CHAT_IDS.value
