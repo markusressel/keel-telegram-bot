@@ -9,6 +9,10 @@ from prometheus_client import start_http_server
 from keel_telegram_bot.bot import KeelTelegramBot
 from keel_telegram_bot.client.api_client import KeelApiClient
 from keel_telegram_bot.config import Config
+from keel_telegram_bot.helm.checker import HelmChartUpdateChecker
+from keel_telegram_bot.helm.client import HelmChartClient
+from keel_telegram_bot.helm.state import HelmChartState
+from keel_telegram_bot.monitoring.helm_chart_monitor import HelmChartMonitor
 from keel_telegram_bot.monitoring.monitor import Monitor
 from keel_telegram_bot.webserver import WebsocketServer
 
@@ -42,15 +46,31 @@ def main():
         config.KEEL_PASSWORD.value,
     )
 
-    bot = KeelTelegramBot(config, api_client)
+    helm_chart_client = None
+    helm_chart_checker = None
+    helm_chart_state = None
+    if config.HELM_CHARTS_ENABLED.value:
+        helm_chart_client = HelmChartClient(config.HELM_CHARTS_NAMESPACE.value)
+        helm_chart_checker = HelmChartUpdateChecker(
+            helm_chart_client,
+            allow=config.HELM_CHARTS_ALLOW.value,
+            deny=config.HELM_CHARTS_DENY.value,
+        )
+        helm_chart_state = HelmChartState(config.HELM_CHARTS_STATE_PATH.value)
+
+    bot = KeelTelegramBot(config, api_client, helm_chart_client, helm_chart_checker, helm_chart_state)
     monitor = Monitor(config, api_client, bot)
     server = WebsocketServer(config, bot)
 
-    tasks = asyncio.gather(
+    workers = [
         bot.start(),
         monitor.start(),
         server.start(),
-    )
+    ]
+    if helm_chart_checker is not None:
+        workers.append(HelmChartMonitor(config, helm_chart_checker, bot).start())
+
+    tasks = asyncio.gather(*workers)
 
     loop.run_until_complete(tasks)
     loop.run_forever()
