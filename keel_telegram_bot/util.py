@@ -1,4 +1,5 @@
 import functools
+import html
 import logging
 import operator
 import re
@@ -12,6 +13,9 @@ from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.client.resource import Resource
 from keel_telegram_bot.client.tracked_image import TrackedImage
 from keel_telegram_bot.config import Config
+from keel_telegram_bot.helm.chart import HelmChart
+from keel_telegram_bot.helm.checker import HelmChartCheckResult
+from keel_telegram_bot.helm.index import HelmChartUpdate, ChartVersion
 
 LOGGER = logging.getLogger(__name__)
 
@@ -223,3 +227,96 @@ def deadline_diff_to_str(deadline_diff) -> str:
         units.append(f"{seconds}s")
 
     return "".join(units)
+
+
+HELM_CHART_CHANGES_LIMIT = 10
+HELM_CHART_CHANGE_LENGTH_LIMIT = 200
+
+
+def helm_chart_update_to_str(chart: HelmChart, update: HelmChartUpdate) -> str:
+    """
+    Formats a helm chart update notification (HTML)
+    """
+    newest = update.newest
+    current = update.current
+
+    if update.is_major:
+        title = f"Major helm chart update: {chart.name}"
+        version_line = f"Version: {update.current_version} -> {newest.version} (major)"
+    else:
+        title = f"New helm chart version: {chart.name}"
+        version_line = f"Version: {update.current_version} -> {newest.version}"
+
+    lines = [
+        f"<b>{html.escape(title)}</b>",
+        f"Release: {html.escape(chart.name)}",
+        f"Namespace: {html.escape(chart.target_namespace or chart.namespace)}",
+        f"Chart: {html.escape(chart.chart)} ({html.escape(chart.repo)})",
+        html.escape(version_line),
+    ]
+
+    current_app_version = current.app_version if current is not None else None
+    if newest.app_version and newest.app_version != current_app_version:
+        lines.append(html.escape(f"App version: {current_app_version or '?'} -> {newest.app_version}"))
+
+    if update.is_major:
+        major = update.current_version.lstrip("v").split(".")[0]
+        if update.newest_in_major is not None:
+            in_major = update.newest_in_major
+            text = f"Newest {major}.x version: {in_major.version}"
+            if in_major.app_version and in_major.app_version != current_app_version:
+                text += f" (app version {in_major.app_version})"
+            lines.append(html.escape(text))
+        else:
+            lines.append(html.escape(f"No newer {major}.x version available."))
+        lines.append("Major updates need manual steps (CRDs, upgrade notes), "
+                     "upgrade them by changing the HelmChart manifest.")
+
+    lines.extend(_chart_version_details_to_lines(newest, show_version=update.is_major))
+    return "\n".join(lines)
+
+
+def _chart_version_details_to_lines(version: ChartVersion, show_version: bool) -> List[str]:
+    lines = []
+    suffix = f" ({html.escape(version.version)})" if show_version else ""
+    if len(version.changes) > 0:
+        lines.append(f"Changes{suffix}:")
+        for change in version.changes[:HELM_CHART_CHANGES_LIMIT]:
+            if len(change) > HELM_CHART_CHANGE_LENGTH_LIMIT:
+                change = change[:HELM_CHART_CHANGE_LENGTH_LIMIT - 3] + "..."
+            lines.append(f"- {html.escape(change)}")
+        if len(version.changes) > HELM_CHART_CHANGES_LIMIT:
+            lines.append(f"- ... ({len(version.changes) - HELM_CHART_CHANGES_LIMIT} more)")
+    if len(version.links) > 0:
+        links = " | ".join(
+            f'<a href="{html.escape(url, quote=True)}">{html.escape(name)}</a>' for name, url in version.links)
+        lines.append(f"Links{suffix}: {links}")
+    return lines
+
+
+def helm_chart_check_result_to_str(result: HelmChartCheckResult, ignored: bool = False) -> str:
+    """
+    Formats the check result of a single HelmChart as a list entry (HTML)
+    :param result: check result
+    :param ignored: whether the newest version was ignored
+    """
+    chart = result.chart
+    header = f"> <b>{html.escape(chart.name)}</b> ({html.escape(chart.target_namespace or chart.namespace)})"
+    if result.skip_reason is not None:
+        version = f"{chart.version}, " if chart.version else ""
+        return f"{header}\n  {html.escape(version)}skipped: {html.escape(result.skip_reason.value)}"
+    if result.error is not None:
+        return f"{header}\n  {html.escape(chart.version)}, error: {html.escape(result.error)}"
+
+    latest = result.latest.version if result.latest is not None else "?"
+    line = f"  Current: {chart.version}, latest: {latest}"
+    if result.update is not None:
+        if result.update.is_major:
+            line += " (major)"
+            if result.update.newest_in_major is not None:
+                line += f", newest in major: {result.update.newest_in_major.version}"
+        if ignored:
+            line += " (ignored)"
+    else:
+        line += " (up to date)"
+    return f"{header}\n{html.escape(line)}"

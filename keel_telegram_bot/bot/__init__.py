@@ -1,4 +1,5 @@
 import asyncio
+import html
 import logging
 import re
 from typing import Dict, Optional
@@ -21,8 +22,15 @@ from keel_telegram_bot.client.resource import Resource
 from keel_telegram_bot.client.tracked_image import TrackedImage
 from keel_telegram_bot.client.types import SemverPolicy, Policy, PollSchedule, SemverPolicyType, Trigger
 from keel_telegram_bot.config import Config
+from keel_telegram_bot.helm.chart import HelmChart, SkipReason
+from keel_telegram_bot.helm.checker import HelmChartUpdateChecker, HelmChartCheckResult
+from keel_telegram_bot.helm.client import HelmChartClient, InstallJobStatus
+from keel_telegram_bot.helm.index import HelmChartUpdate
+from keel_telegram_bot.helm.state import HelmChartState
+from keel_telegram_bot.helm.version import SemVer
 from keel_telegram_bot.stats import *
-from keel_telegram_bot.util import send_message, approval_to_str, resource_to_str, tracked_image_to_str
+from keel_telegram_bot.util import send_message, approval_to_str, resource_to_str, tracked_image_to_str, \
+    helm_chart_update_to_str, helm_chart_check_result_to_str
 
 LOGGER = logging.getLogger(__name__)
 
@@ -38,13 +46,22 @@ class KeelTelegramBot:
     The main entry class of the keel telegram bot
     """
 
-    def __init__(self, config: Config, api_client: KeelApiClient):
+    def __init__(self, config: Config, api_client: KeelApiClient,
+                 helm_chart_client: Optional[HelmChartClient] = None,
+                 helm_chart_checker: Optional[HelmChartUpdateChecker] = None,
+                 helm_chart_state: Optional[HelmChartState] = None):
         """
         Creates an instance.
         :param config: configuration object
+        :param helm_chart_client: HelmChart client, None if helm chart updates are disabled
+        :param helm_chart_checker: HelmChart update checker, None if helm chart updates are disabled
+        :param helm_chart_state: announced/ignored helm chart versions, None if helm chart updates are disabled
         """
         self._config = config
         self._api_client = api_client
+        self._helm_chart_client = helm_chart_client
+        self._helm_chart_checker = helm_chart_checker
+        self._helm_chart_state = helm_chart_state
         self._message_map = {}
 
         self._response_handler = ReplyKeyboardHandler()
@@ -81,6 +98,12 @@ class KeelTelegramBot:
                 CommandHandler(COMMAND_STATS,
                                filters=(~ filters.REPLY) & (~ filters.FORWARDED),
                                callback=self._stats_callback),
+                CommandHandler(COMMAND_LIST_HELM_CHARTS,
+                               filters=(~ filters.REPLY) & (~ filters.FORWARDED),
+                               callback=self._list_helm_charts_callback),
+                CommandHandler(COMMAND_CHECK_HELM_CHARTS,
+                               filters=(~ filters.REPLY) & (~ filters.FORWARDED),
+                               callback=self._check_helm_charts_callback),
                 CommandHandler(COMMAND_CHATID,
                                filters=(~ filters.REPLY) & (~ filters.FORWARDED),
                                callback=self._chatid_callback),
@@ -558,6 +581,135 @@ class KeelTelegramBot:
         text = f"{stats}"
         await send_message(bot, chat_id, text, reply_to=message.message_id)
 
+    @COMMAND_TIME_LIST_HELM_CHARTS.time()
+    @command(name=COMMAND_LIST_HELM_CHARTS,
+             description="List HelmCharts with their current and latest version.",
+             error_handler=CustomErrorHandler(),
+             permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
+    async def _list_helm_charts_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """
+        Lists all HelmCharts with their current and latest version
+        """
+        bot = context.bot
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+
+        if self._helm_chart_checker is None:
+            await send_message(bot, chat_id, "Helm chart updates are disabled.", reply_to=message.message_id)
+            return
+
+        results = await asyncio.to_thread(self._helm_chart_checker.check)
+        results = list(filter(lambda x: not self._is_filtered_for(chat_id, x.chart.identifier), results))
+        if len(results) == 0:
+            await send_message(bot, chat_id, "No HelmCharts found.", reply_to=message.message_id)
+            return
+
+        text = "\n\n".join(list(map(
+            lambda x: helm_chart_check_result_to_str(x, ignored=self._is_helm_chart_update_ignored(x)),
+            results)))
+        await send_message(bot, chat_id, text, reply_to=message.message_id, parse_mode="HTML")
+
+    @COMMAND_TIME_CHECK_HELM_CHARTS.time()
+    @command(name=COMMAND_CHECK_HELM_CHARTS,
+             description="Check HelmCharts for new chart versions now.",
+             arguments=[
+                 Flag(name=["force", "f"], description="Notify again about already announced versions"),
+             ],
+             error_handler=CustomErrorHandler(),
+             permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
+    async def _check_helm_charts_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
+                                          force: bool) -> None:
+        """
+        Checks all HelmCharts for updates and sends notifications for new versions
+        """
+        bot = context.bot
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+
+        if self._helm_chart_checker is None:
+            await send_message(bot, chat_id, "Helm chart updates are disabled.", reply_to=message.message_id)
+            return
+
+        results = await asyncio.to_thread(self._helm_chart_checker.check)
+        notified = await self.on_helm_chart_check_results(results, force=force)
+
+        results = list(filter(lambda x: not self._is_filtered_for(chat_id, x.chart.identifier), results))
+        checked = list(filter(lambda x: x.skip_reason is None and x.error is None, results))
+        updates = list(filter(lambda x: x.update is not None, checked))
+        skipped = list(filter(
+            lambda x: x.skip_reason is not None and x.skip_reason != SkipReason.FILTERED, results))
+        errors = list(filter(lambda x: x.error is not None, results))
+
+        lines = [f"Checked {len(checked)} HelmChart(s): {len(updates)} update(s), {len(notified)} notification(s) sent"]
+        if len(updates) > 0:
+            lines.append("Updates: " + ", ".join(
+                map(lambda x: f"{x.chart.name} ({x.chart.version} -> {x.update.newest.version})", updates)))
+        if len(skipped) > 0:
+            lines.append("Skipped: " + ", ".join(
+                map(lambda x: f"{x.chart.name} ({x.skip_reason.value})", skipped)))
+        if len(errors) > 0:
+            lines.append("Errors:\n" + "\n".join(map(lambda x: f"{x.chart.name}: {x.error}", errors)))
+
+        await send_message(bot, chat_id, "\n".join(lines), reply_to=message.message_id)
+
+    async def on_helm_chart_check_results(self, results: List[HelmChartCheckResult],
+                                          force: bool = False) -> List[HelmChartCheckResult]:
+        """
+        Sends a notification for each HelmChart with a new version, unless it was already announced or ignored
+        :param results: results of a HelmChart update check
+        :param force: notify again about versions that were already announced (but not ignored)
+        :return: results that a notification was sent for
+        """
+        notified = []
+        for result in results:
+            chart = result.chart
+            if result.skip_reason is not None or result.error is not None:
+                continue
+
+            # forget versions that are installed by now
+            self._helm_chart_state.prune(chart.name, chart.version)
+
+            if result.update is None:
+                continue
+            versions = result.update.offered_versions
+            if force:
+                if all(map(lambda x: self._helm_chart_state.is_ignored(chart.name, x), versions)):
+                    continue
+            elif not self._helm_chart_state.should_announce(chart.name, versions):
+                LOGGER.debug(f"Already announced helm chart versions {versions} of '{chart.name}'")
+                continue
+
+            await self.on_new_helm_chart_update(chart, result.update)
+            self._helm_chart_state.mark_announced(chart.name, versions)
+            notified.append(result)
+        return notified
+
+    async def on_new_helm_chart_update(self, chart: HelmChart, item: HelmChartUpdate):
+        """
+        Sends a helm chart update notification including an inline keyboard to all configured chat ids
+        :param chart: the HelmChart
+        :param item: the update
+        """
+        HELM_CHART_UPDATE_COUNTER.inc()
+        text = helm_chart_update_to_str(chart, item)
+        menu = self.create_helm_chart_update_menu(item)
+
+        for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
+
+            if self._is_filtered_for(chat_id, chart.identifier):
+                LOGGER.debug(f"Skipping helm chart update for chat '{chat_id}' due to filters")
+                continue
+
+            LOGGER.debug(f"Sending helm chart update message to '{chat_id}'")
+            try:
+                await send_message(
+                    self.bot, chat_id,
+                    text, parse_mode="HTML",
+                    menu=menu
+                )
+            except Exception as ex:
+                LOGGER.exception(ex)
+
     async def on_notification(self, data: dict):
         """
         Handles incoming notifications (via Webhook)
@@ -720,11 +872,20 @@ class KeelTelegramBot:
         if data == BUTTON_DATA_NOTHING:
             return
 
+        if data.startswith(BUTTON_DATA_HELM_UPGRADE_PREFIX) or data.startswith(BUTTON_DATA_HELM_IGNORE_PREFIX):
+            await self._helm_chart_button_callback(update, context)
+            return
+
         try:
             matches = re.search(r"^Id: (.*)", message_text, flags=re.MULTILINE)
             approval_id = matches.group(1)
             matches = re.search(r"^Identifier: (.*)", message_text, flags=re.MULTILINE)
             approval_identifier = matches.group(1)
+
+            if not self._is_button_press_allowed(update) \
+                    or self._is_filtered_for(update.effective_chat.id, approval_identifier):
+                await bot.answer_callback_query(query_id, text="You are not allowed to do this")
+                return
 
             if data == BUTTON_DATA_APPROVE:
                 self._api_client.approve(approval_id, approval_identifier, from_user.full_name)
@@ -746,6 +907,130 @@ class KeelTelegramBot:
         except Exception as e:
             LOGGER.error(e)
             await bot.answer_callback_query(query_id, text=f"Unknwon error")
+
+    async def _helm_chart_button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Handles the "Upgrade" and "Ignore" buttons of helm chart update notifications
+        """
+        bot = context.bot
+        query = update.callback_query
+        query_id = query.id
+        data = query.data
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+        from_user = query.from_user
+
+        if not self._is_button_press_allowed(update):
+            await bot.answer_callback_query(query_id, text="You are not allowed to do this")
+            return
+
+        if self._helm_chart_client is None:
+            await bot.answer_callback_query(query_id, text="Helm chart updates are disabled")
+            return
+
+        try:
+            matches = re.search(r"^Release: (.*)", message.text, flags=re.MULTILINE)
+            name = matches.group(1).strip()
+            chart = await asyncio.to_thread(self._helm_chart_client.get_helm_chart, name)
+            if self._is_filtered_for(chat_id, chart.identifier):
+                await bot.answer_callback_query(query_id, text="You are not allowed to do this")
+                return
+
+            if data.startswith(BUTTON_DATA_HELM_IGNORE_PREFIX):
+                versions = data[len(BUTTON_DATA_HELM_IGNORE_PREFIX):].split(",")
+                self._helm_chart_state.ignore(name, versions)
+                HELM_CHART_ACTION_COUNTER.labels(action="ignore", name=name).inc()
+                await bot.answer_callback_query(query_id, text=f"Ignoring {name} {', '.join(versions)}")
+                await message.edit_reply_markup(self._build_inline_keyboard({"Ignored": BUTTON_DATA_NOTHING}))
+                return
+
+            version = data[len(BUTTON_DATA_HELM_UPGRADE_PREFIX):]
+            error = self._validate_helm_chart_upgrade(chart, version)
+            if error is not None:
+                await bot.answer_callback_query(query_id, text=error)
+                return
+
+            await asyncio.to_thread(self._helm_chart_client.set_version, name, version)
+            LOGGER.info(f"Set version of HelmChart '{name}' from {chart.version} to {version} "
+                        f"(requested by {from_user.username})")
+            HELM_CHART_ACTION_COUNTER.labels(action="upgrade", name=name).inc()
+            await bot.answer_callback_query(query_id, text=f"Upgrading {name} to {version}")
+            await message.edit_reply_markup(
+                self._build_inline_keyboard({f"Upgrading to {version}...": BUTTON_DATA_NOTHING}))
+            context.application.create_task(self._watch_helm_chart_upgrade(bot, chart, version, message))
+        except Exception as e:
+            LOGGER.exception(e)
+            await bot.answer_callback_query(query_id, text=f"Error: {e}"[:200])
+
+    def _validate_helm_chart_upgrade(self, chart: HelmChart, version: str) -> Optional[str]:
+        """
+        Checks whether a chart may be upgraded to the given version from Telegram
+        :return: an error message, or None if the upgrade is allowed
+        """
+        skip_reason = chart.get_skip_reason(self._config.HELM_CHARTS_ALLOW.value, self._config.HELM_CHARTS_DENY.value)
+        if skip_reason is not None:
+            return f"Cannot upgrade {chart.name}: {skip_reason.value}"
+        current = SemVer.parse(chart.version)
+        target = SemVer.parse(version)
+        if current is None or target is None:
+            return f"Cannot compare versions {chart.version} and {version}"
+        if target <= current:
+            return f"{chart.name} is already at version {chart.version}"
+        if target.major != current.major:
+            return "Major updates need manual steps and cannot be done from Telegram"
+        return None
+
+    async def _watch_helm_chart_upgrade(self, bot, chart: HelmChart, version: str, message):
+        """
+        Waits for the install job of a helm chart upgrade and reports the outcome as a reply to the notification
+        """
+        try:
+            result = await asyncio.to_thread(
+                self._helm_chart_client.wait_for_install_job, chart, version,
+                self._config.HELM_CHARTS_JOB_TIMEOUT.value)
+        except Exception as ex:
+            LOGGER.exception(ex)
+            await send_message(bot, message.chat_id, f"Cannot watch upgrade of {chart.name} to {version}: {ex}",
+                               reply_to=message.message_id)
+            return
+
+        if result.status == InstallJobStatus.SUCCEEDED:
+            title = f"Upgraded {chart.name} to {version}"
+            button = f"Upgraded to {version}"
+        elif result.status == InstallJobStatus.FAILED:
+            title = f"Upgrade of {chart.name} to {version} failed"
+            button = f"Upgrade to {version} failed"
+        else:
+            title = f"Upgrade of {chart.name} to {version} timed out"
+            button = f"Upgrade to {version} timed out"
+
+        lines = [f"<b>{html.escape(title)}</b>", html.escape(result.message)]
+        if result.log_tail:
+            lines.append(f"<pre>{html.escape(result.log_tail.strip()[-3000:])}</pre>")
+        await send_message(bot, message.chat_id, "\n".join(lines), parse_mode="HTML", reply_to=message.message_id)
+
+        try:
+            await message.edit_reply_markup(self._build_inline_keyboard({button: BUTTON_DATA_NOTHING}))
+        except Exception as ex:
+            LOGGER.warning(f"Cannot update helm chart notification: {ex}")
+
+    def _is_helm_chart_update_ignored(self, result: HelmChartCheckResult) -> bool:
+        if result.update is None or self._helm_chart_state is None:
+            return False
+        return all(map(lambda x: self._helm_chart_state.is_ignored(result.chart.name, x),
+                       result.update.offered_versions))
+
+    def create_helm_chart_update_menu(self, item: HelmChartUpdate) -> InlineKeyboardMarkup:
+        keyboard_items = {}
+        if item.newest_in_major is not None:
+            label = f"Upgrade to {item.newest_in_major.version}" if item.is_major else "Upgrade"
+            keyboard_items[label] = BUTTON_DATA_HELM_UPGRADE_PREFIX + item.newest_in_major.version
+        ignore_data = BUTTON_DATA_HELM_IGNORE_PREFIX + ",".join(item.offered_versions)
+        if len(ignore_data.encode("utf-8")) > TELEGRAM_CALLBACK_DATA_LIMIT:
+            # very long version strings, only ignore the newest version
+            ignore_data = BUTTON_DATA_HELM_IGNORE_PREFIX + item.newest.version
+        keyboard_items["Ignore"] = ignore_data
+        return self._build_inline_keyboard(keyboard_items)
 
     @staticmethod
     def _build_inline_keyboard(items: Dict[str, str]) -> InlineKeyboardMarkup:
@@ -825,6 +1110,16 @@ class KeelTelegramBot:
 
                 for failure in failed_messages:
                     message_ids.remove(failure)
+
+    def _is_button_press_allowed(self, update: Update) -> bool:
+        """
+        Same rule as for the bot commands: configured chat and admin user. The user is the one who
+        pressed the button (callback_query.from_user); effective_message.from_user is the bot itself.
+        """
+        chat_id = update.effective_chat.id
+        username = update.callback_query.from_user.username
+        return str(chat_id) in self._config.TELEGRAM_CHAT_IDS.value \
+            and username in self._config.TELEGRAM_ADMIN_USERNAMES.value
 
     def _is_filtered_for(self, chat_id: str | int, identifier: str) -> bool:
         chat_ids: List[str] = self._config.TELEGRAM_CHAT_IDS.value

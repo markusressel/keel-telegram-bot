@@ -15,9 +15,12 @@ COMMAND_TIME_APPROVE = COMMAND_TIME.labels(command=COMMAND_APPROVE[0])
 COMMAND_TIME_REJECT = COMMAND_TIME.labels(command=COMMAND_REJECT[0])
 COMMAND_TIME_DELETE = COMMAND_TIME.labels(command=COMMAND_DELETE[0])
 COMMAND_TIME_STATS = COMMAND_TIME.labels(command=COMMAND_STATS)
+COMMAND_TIME_LIST_HELM_CHARTS = COMMAND_TIME.labels(command=COMMAND_LIST_HELM_CHARTS[0])
+COMMAND_TIME_CHECK_HELM_CHARTS = COMMAND_TIME.labels(command=COMMAND_CHECK_HELM_CHARTS[0])
 
 WATCHER_TIME = Summary('watcher_processing_seconds', 'Time spent in a watcher', ['type'])
 APPROVAL_WATCHER_TIME = WATCHER_TIME.labels(type="approval")
+HELM_CHART_WATCHER_TIME = WATCHER_TIME.labels(type="helm_chart")
 
 NEW_PENDING_APPROVAL_COUNTER = Counter('keel_new_pending_approval',
                                        'Counts new pending approvals recognized by this bot')
@@ -28,6 +31,9 @@ REST_TIME_WEBHOOK = REST_TIME.labels(endpoint=ENDPOINT_WEBHOOK)
 KEEL_NOTIFICATION_COUNTER = Counter('keel_notifications', 'Counts notifications received from keel')
 KEEL_APPROVAL_ACTION_COUNTER = Counter('keel_approval_action_counter',
                                        'Counts approval notificaion actions', ['action', 'identifier'])
+HELM_CHART_UPDATE_COUNTER = Counter('helm_chart_update', 'Counts helm chart update notifications sent by this bot')
+HELM_CHART_ACTION_COUNTER = Counter('helm_chart_action_counter',
+                                    'Counts helm chart notification actions', ['action', 'name'])
 
 
 def get_metrics() -> List:

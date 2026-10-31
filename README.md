@@ -16,6 +16,7 @@
 * [x] Delete archived approvals
 * [x] Permission handling based on telegram usernames
 * [x] Filter visible approvals on a per-chat basis
+* [x] Helm chart updates for HelmChart objects of the k3s helm-controller (optional)
 
 # How it works
 
@@ -32,6 +33,67 @@ To get notifications working you will have to provide the address of
 **keel-telegram-bot** to Keel using the `WEBHOOK_ENDPOINT` env variable.
 The simplest way to achieve this is by running both Keel and **keel-telegram-bot**
 on the same host and specifying `http://localhost:5000/`.
+
+## Helm chart updates
+
+Keel does not update Helm chart versions. If enabled (`helm_charts.enabled`), **keel-telegram-bot**
+checks the `HelmChart` objects (`helm.cattle.io/v1`) of the
+[k3s helm-controller](https://docs.k3s.io/helm) for new chart versions:
+
+* The check runs once per `helm_charts.interval` (default: once a day) and when using the `/helmcheck`
+  command. `/helmcharts` lists all HelmCharts with their current and latest version.
+* For each HelmChart, the `index.yaml` of `spec.repo` is fetched and searched for newer versions of `spec.chart`.
+  Pre-releases are ignored, unless the current version is a pre-release itself.
+* HelmCharts managed by k3s itself (f.ex. the bundled traefik), HelmCharts without `spec.repo` or `spec.version`
+  and OCI charts (`oci://...`) are skipped.
+* A minor or patch update is announced with the buttons "Upgrade" and "Ignore". "Upgrade" sets `spec.version`
+  of the HelmChart, waits for the helm-controller install job (`helm-install-<name>`) and reports success, or
+  failure including the end of the job log. "Ignore" stops notifications about this version.
+* A major update is only announced, because it usually needs manual steps (CRD updates, upgrade notes).
+  If there is a newer version within the current major version, the notification offers an upgrade to it.
+* Announced and ignored versions are stored in `helm_charts.state_path`. Put this file on a persistent volume,
+  otherwise pending updates are announced again after a restart and ignored versions are forgotten.
+* Only users in `telegram.admin_usernames` can press the buttons, in one of the `telegram.chat_ids`.
+  The per-chat `filters` apply to the identifier `helmchart/<targetNamespace>/<name>`.
+
+The ServiceAccount of the bot needs the following permissions in the namespace of the HelmCharts:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: keel-telegram-bot-helm-charts
+  namespace: kube-system
+rules:
+  - apiGroups: ["helm.cattle.io"]
+    resources: ["helmcharts"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: keel-telegram-bot-helm-charts
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: keel-telegram-bot-helm-charts
+subjects:
+  - kind: ServiceAccount
+    name: keel
+    namespace: keel
+```
+
+Inside the cluster the bot uses the ServiceAccount token, outside of it the current kubeconfig context.
 
 # How to use
 

@@ -24,6 +24,8 @@ NODE_WEBHOOK = "webhook"
 
 NODE_FILTERS = "filters"
 
+NODE_HELM_CHARTS = "helm_charts"
+
 NODE_STATS = "stats"
 NODE_ENABLED = "enabled"
 NODE_PORT = "port"
@@ -170,6 +172,89 @@ class Config(ConfigBase):
             })
         },
         default=None,
+    )
+
+    HELM_CHARTS_ENABLED = BoolConfigEntry(
+        description="Whether to check HelmChart objects of the k3s helm-controller for new chart versions.",
+        key_path=[
+            NODE_MAIN,
+            NODE_HELM_CHARTS,
+            NODE_ENABLED
+        ],
+        default=False
+    )
+
+    HELM_CHARTS_INTERVAL = TimeDeltaConfigEntry(
+        description="Interval to check for new helm chart versions",
+        key_path=[
+            NODE_MAIN,
+            NODE_HELM_CHARTS,
+            "interval"
+        ],
+        default="24h",
+        required=True,
+    )
+
+    HELM_CHARTS_NAMESPACE = StringConfigEntry(
+        description="Namespace of the HelmChart objects",
+        key_path=[
+            NODE_MAIN,
+            NODE_HELM_CHARTS,
+            "namespace"
+        ],
+        default="kube-system",
+        required=True,
+    )
+
+    HELM_CHARTS_ALLOW = ListConfigEntry(
+        description="Names of HelmCharts to check, all if empty",
+        item_type=StringConfigEntry,
+        key_path=[
+            NODE_MAIN,
+            NODE_HELM_CHARTS,
+            "allow"
+        ],
+        default=[],
+        example=[
+            "loki",
+            "alloy"
+        ]
+    )
+
+    HELM_CHARTS_DENY = ListConfigEntry(
+        description="Names of HelmCharts to never check",
+        item_type=StringConfigEntry,
+        key_path=[
+            NODE_MAIN,
+            NODE_HELM_CHARTS,
+            "deny"
+        ],
+        default=[],
+        example=[
+            "prometheus"
+        ]
+    )
+
+    HELM_CHARTS_STATE_PATH = StringConfigEntry(
+        description="File to remember announced and ignored chart versions in",
+        key_path=[
+            NODE_MAIN,
+            NODE_HELM_CHARTS,
+            "state_path"
+        ],
+        default="helm-chart-state.json",
+        required=True,
+    )
+
+    HELM_CHARTS_JOB_TIMEOUT = TimeDeltaConfigEntry(
+        description="Maximum time to wait for the helm-controller install job after an upgrade",
+        key_path=[
+            NODE_MAIN,
+            NODE_HELM_CHARTS,
+            "job_timeout"
+        ],
+        default="10m",
+        required=True,
     )
 
     STATS_ENABLED = BoolConfigEntry(

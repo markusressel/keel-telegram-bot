@@ -37,6 +37,24 @@ keel-telegram-bot:
       - chat_id: 12345678
         identifier: ".*something.*"
 
+  # Helm chart update specific configuration options (HelmChart objects of the k3s helm-controller)
+  helm_charts:
+    # Whether to check HelmCharts for new chart versions, requires additional RBAC rules (see README)
+    enabled: false
+    # Interval to check for new chart versions
+    interval: 24h
+    # Namespace of the HelmChart objects
+    namespace: kube-system
+    # Names of HelmCharts to check, all HelmCharts if empty
+    allow: []
+    # Names of HelmCharts to never check
+    deny:
+      - prometheus
+    # File to remember announced and ignored chart versions in, put it on a persistent volume
+    state_path: /app/data/helm-chart-state.json
+    # Maximum time to wait for the helm-controller install job after an upgrade
+    job_timeout: 10m
+
   # Prometheus exporter specific configuration options
   stats:
     # Whether to enable the Prometheus exporter
