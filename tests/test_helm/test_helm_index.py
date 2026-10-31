@@ -91,3 +91,7 @@ class HelmIndexTest(TestBase):
         self.assertIn("- fixed: Fix &lt;ingress&gt; &amp; stuff", text)
         self.assertIn('<a href="https://example.com/upgrade">Upgrade Guide</a>', text)
         self.assertNotIn("major", text)
+        self.assertNotIn("HelmChart manifest", text)
+
+        text = helm_chart_update_to_str(chart, update, "listed in helm_charts.notify_only")
+        self.assertIn("Upgrade by changing the HelmChart manifest: listed in helm_charts.notify_only.", text)

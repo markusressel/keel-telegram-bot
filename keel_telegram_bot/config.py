@@ -235,6 +235,20 @@ class Config(ConfigBase):
         ]
     )
 
+    HELM_CHARTS_NOTIFY_ONLY = ListConfigEntry(
+        description="Names of HelmCharts whose updates are only announced, without an upgrade button",
+        item_type=StringConfigEntry,
+        key_path=[
+            NODE_MAIN,
+            NODE_HELM_CHARTS,
+            "notify_only"
+        ],
+        default=[],
+        example=[
+            "traefik"
+        ]
+    )
+
     HELM_CHARTS_STATE_PATH = StringConfigEntry(
         description="File to remember announced and ignored chart versions in",
         key_path=[

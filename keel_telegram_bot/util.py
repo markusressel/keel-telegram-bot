@@ -4,7 +4,7 @@ import logging
 import operator
 import re
 from datetime import datetime, timezone, timedelta
-from typing import List, Any, Tuple, Dict, Callable
+from typing import List, Any, Tuple, Dict, Callable, Optional
 
 from telegram import Bot, Message, LinkPreviewOptions
 from telegram._utils.types import ReplyMarkup
@@ -233,9 +233,10 @@ HELM_CHART_CHANGES_LIMIT = 10
 HELM_CHART_CHANGE_LENGTH_LIMIT = 200
 
 
-def helm_chart_update_to_str(chart: HelmChart, update: HelmChartUpdate) -> str:
+def helm_chart_update_to_str(chart: HelmChart, update: HelmChartUpdate, manual_reason: Optional[str] = None) -> str:
     """
     Formats a helm chart update notification (HTML)
+    :param manual_reason: reason why the update cannot be upgraded from Telegram, if any
     """
     newest = update.newest
     current = update.current
@@ -271,6 +272,8 @@ def helm_chart_update_to_str(chart: HelmChart, update: HelmChartUpdate) -> str:
             lines.append(html.escape(f"No newer {major}.x version available."))
         lines.append("Major updates need manual steps (CRDs, upgrade notes), "
                      "upgrade them by changing the HelmChart manifest.")
+    elif manual_reason is not None:
+        lines.append(html.escape(f"Upgrade by changing the HelmChart manifest: {manual_reason}."))
 
     lines.extend(_chart_version_details_to_lines(newest, show_version=update.is_major))
     return "\n".join(lines)

@@ -34,6 +34,7 @@ def _config():
     config.TELEGRAM_FILTERS.value = []
     config.HELM_CHARTS_ALLOW.value = []
     config.HELM_CHARTS_DENY.value = []
+    config.HELM_CHARTS_NOTIFY_ONLY.value = []
     return config
 
 
@@ -76,7 +77,7 @@ class HelmBotTest(TestBase):
 
     def test_menu(self):
         def button_data(result):
-            menu = self.bot.create_helm_chart_update_menu(result.update)
+            menu = self.bot.create_helm_chart_update_menu(result.chart, result.update)
             return {x[0].text: x[0].callback_data for x in menu.inline_keyboard}
 
         self.assertEqual({"Upgrade": "hu:20.3.0", "Ignore": "hi:20.3.0"},
@@ -116,6 +117,21 @@ class HelmBotTest(TestBase):
 
         self.client.set_version.assert_not_called()
         self.assertIn("Major", context.bot.answer_callback_query.call_args.kwargs["text"])
+
+    def test_menu_notify_only(self):
+        self.bot._config.HELM_CHARTS_NOTIFY_ONLY.value = ["loki"]
+        result = _result(_chart(), "20.3.0")
+        menu = self.bot.create_helm_chart_update_menu(result.chart, result.update)
+        self.assertEqual({"Ignore": "hi:20.3.0"}, {x[0].text: x[0].callback_data for x in menu.inline_keyboard})
+
+    def test_upgrade_notify_only_refused(self):
+        self.bot._config.HELM_CHARTS_NOTIFY_ONLY.value = ["loki"]
+        self.client.get_helm_chart.return_value = _chart()
+
+        _, context = self._click("hu:20.3.0")
+
+        self.client.set_version.assert_not_called()
+        self.assertIn("notify_only", context.bot.answer_callback_query.call_args.kwargs["text"])
 
     def test_upgrade_already_done(self):
         self.client.get_helm_chart.return_value = _chart(version="20.3.0")
