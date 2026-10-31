@@ -53,3 +53,30 @@ class HelmChartTest(TestBase):
         self.assertEqual(SkipReason.FILTERED, chart.get_skip_reason(allow=["alloy"]))
         self.assertEqual(SkipReason.FILTERED, chart.get_skip_reason(deny=["loki"]))
         self.assertIsNone(chart.get_skip_reason(allow=[], deny=["alloy"]))
+
+    def test_get_value(self):
+        chart = _chart(valuesContent="crds:\n  upgradeJob:\n    enabled: true\nreplicas: 2\n")
+        self.assertTrue(chart.get_value("crds.upgradeJob.enabled"))
+        self.assertEqual(2, chart.get_value("replicas"))
+        self.assertIsNone(chart.get_value("crds.enabled"))
+        self.assertIsNone(chart.get_value("replicas.count"))
+        self.assertIsNone(_chart().get_value("replicas"))
+        self.assertIsNone(_chart(valuesContent="a: [").get_value("a"))
+        # spec.set takes precedence
+        chart = _chart(valuesContent="replicas: 2\n", set={"replicas": "3"})
+        self.assertEqual("3", chart.get_value("replicas"))
+
+    def test_manual_upgrade_reason(self):
+        self.assertIsNone(_chart(chart="loki").get_manual_upgrade_reason())
+        self.assertIn("notify_only", _chart(chart="loki").get_manual_upgrade_reason(["loki"]))
+
+        kps = dict(name="prometheus", chart="kube-prometheus-stack")
+        self.assertIn("CRDs", _chart(**kps).get_manual_upgrade_reason())
+        self.assertIn("CRDs", _chart(**kps, valuesContent="crds:\n  upgradeJob:\n    enabled: false\n")
+                      .get_manual_upgrade_reason())
+        self.assertIsNone(_chart(**kps, valuesContent="crds:\n  upgradeJob:\n    enabled: true\n")
+                          .get_manual_upgrade_reason())
+        self.assertIsNone(_chart(**kps, set={"crds.upgradeJob.enabled": "true"}).get_manual_upgrade_reason())
+        # chart given with the repository name
+        self.assertIn("CRDs", _chart(name="prometheus", chart="prometheus-community/kube-prometheus-stack")
+                      .get_manual_upgrade_reason())

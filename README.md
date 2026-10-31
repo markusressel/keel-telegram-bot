@@ -51,6 +51,10 @@ checks the `HelmChart` objects (`helm.cattle.io/v1`) of the
   failure including the end of the job log. "Ignore" stops notifications about this version.
 * A major update is only announced, because it usually needs manual steps (CRD updates, upgrade notes).
   If there is a newer version within the current major version, the notification offers an upgrade to it.
+* Updates of HelmCharts in `helm_charts.notify_only` are only announced, with an "Ignore" button but no
+  "Upgrade" button. The same applies automatically to charts that ship CRDs which helm does not upgrade,
+  unless the HelmChart enables the chart's own CRD upgrade (`spec.set` or `spec.valuesContent`):
+  `kube-prometheus-stack` with `crds.upgradeJob.enabled: true`.
 * Announced and ignored versions are stored in `helm_charts.state_path`. Put this file on a persistent volume,
   otherwise pending updates are announced again after a restart and ignored versions are forgotten.
 * Only users in `telegram.admin_usernames` can press the buttons, in one of the `telegram.chat_ids`.

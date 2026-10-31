@@ -691,8 +691,9 @@ class KeelTelegramBot:
         :param item: the update
         """
         HELM_CHART_UPDATE_COUNTER.inc()
-        text = helm_chart_update_to_str(chart, item)
-        menu = self.create_helm_chart_update_menu(item)
+        manual_reason = chart.get_manual_upgrade_reason(self._config.HELM_CHARTS_NOTIFY_ONLY.value)
+        text = helm_chart_update_to_str(chart, item, manual_reason)
+        menu = self.create_helm_chart_update_menu(chart, item)
 
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
 
@@ -978,6 +979,9 @@ class KeelTelegramBot:
             return f"{chart.name} is already at version {chart.version}"
         if target.major != current.major:
             return "Major updates need manual steps and cannot be done from Telegram"
+        manual_reason = chart.get_manual_upgrade_reason(self._config.HELM_CHARTS_NOTIFY_ONLY.value)
+        if manual_reason is not None:
+            return f"Cannot upgrade {chart.name} from Telegram: {manual_reason}"
         return None
 
     async def _watch_helm_chart_upgrade(self, bot, chart: HelmChart, version: str, message):
@@ -1020,9 +1024,10 @@ class KeelTelegramBot:
         return all(map(lambda x: self._helm_chart_state.is_ignored(result.chart.name, x),
                        result.update.offered_versions))
 
-    def create_helm_chart_update_menu(self, item: HelmChartUpdate) -> InlineKeyboardMarkup:
+    def create_helm_chart_update_menu(self, chart: HelmChart, item: HelmChartUpdate) -> InlineKeyboardMarkup:
         keyboard_items = {}
-        if item.newest_in_major is not None:
+        manual_reason = chart.get_manual_upgrade_reason(self._config.HELM_CHARTS_NOTIFY_ONLY.value)
+        if item.newest_in_major is not None and manual_reason is None:
             label = f"Upgrade to {item.newest_in_major.version}" if item.is_major else "Upgrade"
             keyboard_items[label] = BUTTON_DATA_HELM_UPGRADE_PREFIX + item.newest_in_major.version
         ignore_data = BUTTON_DATA_HELM_IGNORE_PREFIX + ",".join(item.offered_versions)

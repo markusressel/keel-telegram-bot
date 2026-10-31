@@ -48,8 +48,10 @@ keel-telegram-bot:
     # Names of HelmCharts to check, all HelmCharts if empty
     allow: []
     # Names of HelmCharts to never check
-    deny:
-      - prometheus
+    deny: []
+    # Names of HelmCharts whose updates are only announced, without an "Upgrade" button.
+    # kube-prometheus-stack is treated like this automatically unless it sets crds.upgradeJob.enabled: true
+    notify_only: []
     # File to remember announced and ignored chart versions in, put it on a persistent volume
     state_path: /app/data/helm-chart-state.json
     # Maximum time to wait for the helm-controller install job after an upgrade
