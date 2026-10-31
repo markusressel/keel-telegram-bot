@@ -116,10 +116,60 @@ See [keel-telegram-bot_example.yaml](/keel-telegram-bot_example.yaml) for an exa
 
 To run **keel-telegram-bot** using docker you can use the [ghcr.io/markusressel/keel-telegram-bot](https://github.com/markusressel/keel-telegram-bot/pkgs/container/keel-telegram-bot) image:
 
-```
-sudo docker run -t \
+```shell
+docker volume create keel-telegram-bot-data
+docker run -d --name keel-telegram-bot --restart unless-stopped \
+    -p 5000:5000 \
+    -v "$(pwd)/keel-telegram-bot.yaml:/app/keel-telegram-bot.yaml:ro" \
+    -v keel-telegram-bot-data:/app/data \
     ghcr.io/markusressel/keel-telegram-bot:latest
 ```
+
+* `keel-telegram-bot.yaml` holds the configuration, see above.
+* Port `5000` receives the notifications of Keel. Point Keel's `WEBHOOK_ENDPOINT` at it,
+  f.ex. `http://<host>:5000/`.
+* `/app/data` keeps the state of the Helm chart updates. Set `helm_charts.state_path` to
+  `/app/data/helm-chart-state.json`. Without a volume, pending updates are announced again after a
+  restart and ignored versions are forgotten.
+
+Keel needs a volume too: it keeps its approvals in `/data/keel.db`. Without a volume, every restart
+of Keel loses the pending approvals, and Keel sends all of them again with new ids, so the bot
+announces every pending update again.
+
+### Kubernetes
+
+Run the bot as a second container in the Keel pod: the bot reaches the Keel API on `localhost:9300`
+and Keel reaches the webhook on `http://localhost:5000/`. One volume can hold the state of both
+containers with a `subPath` each:
+
+```yaml
+containers:
+  - name: keel
+    # ...
+    volumeMounts:
+      - name: data
+        mountPath: /data
+        subPath: keel
+  - name: telegram-bot
+    image: ghcr.io/markusressel/keel-telegram-bot:latest
+    volumeMounts:
+      - name: config
+        mountPath: /app/keel-telegram-bot.yaml
+        subPath: keel-telegram-bot.yaml
+      - name: data
+        mountPath: /app/data
+        subPath: telegram-bot
+volumes:
+  - name: config
+    configMap:
+      name: keel-telegram-bot
+  - name: data
+    persistentVolumeClaim:
+      claimName: keel-data
+```
+
+For Helm chart updates the ServiceAccount of the pod needs the RBAC rules from
+[Helm chart updates](#helm-chart-updates).
 
 # Contributing
 
