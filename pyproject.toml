@@ -44,7 +44,7 @@ prometheus-client = "*"
 prometheus_async = "*"
 fuzzywuzzy = "*"
 python-Levenshtein = "*"
-kubernetes = "*"
+kubernetes = ">=37"
 pyyaml = "*"
 
 [tool.poetry.group.test.dependencies]
