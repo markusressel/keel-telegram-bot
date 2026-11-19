@@ -31,7 +31,7 @@ from keel_telegram_bot.helm.index import HelmChartUpdate
 from keel_telegram_bot.helm.state import HelmChartState
 from keel_telegram_bot.helm.version import SemVer
 from keel_telegram_bot.stats import *
-from keel_telegram_bot.util import send_message, approval_to_str, approval_signature, resource_to_str, \
+from keel_telegram_bot.util import send_message, approval_to_str, approval_signature, resource_to_str, approval_button_data, parse_approval_button_data, \
     tracked_image_to_str, helm_chart_update_to_str, helm_chart_check_result_to_str
 
 LOGGER = logging.getLogger(__name__)
@@ -331,27 +331,27 @@ class KeelTelegramBot:
             lines.append("\n".join([
                 f"<b>=== Archived ({len(archived_items_limited)}/{len(archived_items)}) ===</b>",
                 "",
-                "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), archived_items)))
+                "\n\n".join(list(map(lambda x: "> " + approval_to_str(x, detailed=True), archived_items)))
             ]).strip())
 
         if approved:
             lines.append("\n".join([
                 f"<b>=== Approved ({len(approved_items_limited)}/{len(approved_items)}) ===</b>",
                 "",
-                "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), approved_items))),
+                "\n\n".join(list(map(lambda x: "> " + approval_to_str(x, detailed=True), approved_items))),
             ]).strip())
 
         if rejected:
             lines.append("\n".join([
                 f"<b>=== Rejected ({len(rejected_items_limited)}{len(rejected_items)}) ===</b>",
                 "",
-                "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), rejected_items))),
+                "\n\n".join(list(map(lambda x: "> " + approval_to_str(x, detailed=True), rejected_items))),
             ]).strip())
 
         lines.append("\n".join([
             f"<b>=== Pending ({len(pending_items_limited)}/{len(pending_items)}) ===</b>",
             "",
-            "\n\n".join(list(map(lambda x: "> " + approval_to_str(x), pending_items))),
+            "\n\n".join(list(map(lambda x: "> " + approval_to_str(x, detailed=True), pending_items))),
         ]))
 
         text = "\n\n".join(lines).strip()
@@ -899,10 +899,16 @@ class KeelTelegramBot:
             return
 
         try:
-            matches = re.search(r"^Id: (.*)", message_text, flags=re.MULTILINE)
-            approval_id = matches.group(1)
-            matches = re.search(r"^Identifier: (.*)", message_text, flags=re.MULTILINE)
-            approval_identifier = matches.group(1)
+            action, approval_id = parse_approval_button_data(data)
+            if approval_id is not None:
+                approval_identifier = self._find_identifier(update.effective_chat.id,
+                                                            update.effective_message.message_id, approval_id)
+            else:
+                # button of a message from before the buttons carried the id: the text has it
+                matches = re.search(r"^Id: (.*)", message_text, flags=re.MULTILINE)
+                approval_id = matches.group(1)
+                matches = re.search(r"^Identifier: (.*)", message_text, flags=re.MULTILINE)
+                approval_identifier = matches.group(1)
 
             if not self._is_button_press_allowed(update) \
                     or self._is_filtered_for(update.effective_chat.id, approval_identifier):
@@ -914,11 +920,11 @@ class KeelTelegramBot:
             self._store.register(update.effective_chat.id, update.effective_message.message_id,
                                              approval_id, approval_identifier)
 
-            if data == BUTTON_DATA_APPROVE:
+            if action == BUTTON_DATA_APPROVE:
                 self._api_client.approve(approval_id, approval_identifier, from_user.full_name)
                 answer_text = f"Approved '{approval_identifier}'"
                 KEEL_APPROVAL_ACTION_COUNTER.labels(action="approve", identifier=approval_identifier).inc()
-            elif data == BUTTON_DATA_REJECT:
+            elif action == BUTTON_DATA_REJECT:
                 self._api_client.reject(approval_id, approval_identifier, from_user.full_name)
                 answer_text = f"Rejected '{approval_identifier}'"
                 KEEL_APPROVAL_ACTION_COUNTER.labels(action="reject", identifier=approval_identifier).inc()
@@ -936,6 +942,8 @@ class KeelTelegramBot:
                 await self.update_messages()
             except Exception as ex:
                 LOGGER.exception(ex)
+        except LookupError as e:
+            await bot.answer_callback_query(query_id, text=str(e))
         except Exception as e:
             LOGGER.error(e)
             await bot.answer_callback_query(query_id, text=f"Unknown error")
@@ -1115,6 +1123,18 @@ class KeelTelegramBot:
         keyboard = list(map(lambda x: InlineKeyboardButton(x[0], callback_data=x[1]), items.items()))
         return InlineKeyboardMarkup.from_column(keyboard)
 
+    def _find_identifier(self, chat_id: int, message_id: int, approval_id: str) -> str:
+        """
+        :return: the identifier of an approval: from the remembered message, or else from Keel
+        """
+        message = self._store.find(chat_id, message_id)
+        if message is not None and message.approval_id == approval_id:
+            return message.identifier
+        for approval in self._api_client.get_approvals():
+            if approval.id == approval_id:
+                return approval.identifier
+        raise LookupError(f"Approval {approval_id} does not exist anymore")
+
     def create_approval_notification_menu(self, item: Approval) -> InlineKeyboardMarkup:
         keyboard_items = {}
         if item.archived:
@@ -1123,8 +1143,8 @@ class KeelTelegramBot:
             keyboard_items["Rejected"] = BUTTON_DATA_NOTHING
         else:
             if item.votesRequired > item.votesReceived:
-                keyboard_items["Approve"] = BUTTON_DATA_APPROVE
-                keyboard_items["Reject"] = BUTTON_DATA_REJECT
+                keyboard_items["Approve"] = approval_button_data(BUTTON_DATA_APPROVE, item.id)
+                keyboard_items["Reject"] = approval_button_data(BUTTON_DATA_REJECT, item.id)
 
         return self._build_inline_keyboard(keyboard_items)
 
