@@ -94,6 +94,7 @@ class HelmBotTest(TestBase):
         update.callback_query.from_user.username = username
         update.effective_chat.id = chat_id
         update.effective_message.text = "New helm chart version: loki\nRelease: loki\nNamespace: loki"
+        update.effective_message.message_id = 7
         update.effective_message.edit_reply_markup = AsyncMock()
         context = MagicMock()
         context.bot.answer_callback_query = AsyncMock()
@@ -162,6 +163,7 @@ class HelmBotTest(TestBase):
         update.callback_query.from_user.username = username
         update.effective_chat.id = chat_id
         update.effective_message.text = "Approval request\nId: abc\nIdentifier: deployment/default/app:1.2.3"
+        update.effective_message.message_id = 7
         update.effective_message.edit_text = AsyncMock()
         context = MagicMock()
         context.bot.answer_callback_query = AsyncMock()

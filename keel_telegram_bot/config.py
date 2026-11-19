@@ -65,6 +65,22 @@ class Config(ConfigBase):
         required=True
     )
 
+    DATABASE_URL = StringConfigEntry(
+        description="SQLAlchemy URL of the database that keeps the state of the bot (approval messages, announced "
+                    "approvals, running helm chart upgrades). SQLite file or PostgreSQL, "
+                    "e.g. postgresql://user:password@host:5432/keel_bot. The schema is created and updated "
+                    "automatically.",
+        key_path=[
+            NODE_MAIN,
+            "database",
+            "url"
+        ],
+        default="sqlite:///keel-telegram-bot.db",
+        example="postgresql://keel:secret@postgres.postgres:5432/keel_telegram_bot",
+        secret=True,
+        required=True,
+    )
+
     TELEGRAM_ADMIN_USERNAMES = ListConfigEntry(
         item_type=StringConfigEntry,
         key_path=[

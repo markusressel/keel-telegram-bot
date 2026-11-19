@@ -139,6 +139,14 @@ def filter_new_by_key(a: List, b: List, key: Callable) -> List:
     return result
 
 
+def approval_signature(data: Approval) -> str:
+    """
+    :return: what the buttons and the votes of an approval notification show. It leaves out the remaining time of
+    the deadline, which changes all the time, so it tells when a message has to be edited and when not.
+    """
+    return f"{int(data.archived)}|{int(data.rejected)}|{data.votesReceived}/{data.votesRequired}"
+
+
 def approval_to_str(data: Approval) -> str:
     id = data.id
     identifier = data.identifier

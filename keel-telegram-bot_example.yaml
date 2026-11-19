@@ -2,6 +2,11 @@ keel-telegram-bot:
   # Determines the log level of the application, one of: debug, info, warning, error, fatal, panic
   log_level: warning
 
+  # State of the bot (approval messages, announced approvals). SQLite file or PostgreSQL URL,
+  # the schema is created automatically. Put a SQLite file on a persistent volume
+  database:
+    url: sqlite:////app/data/keel-telegram-bot.db
+
   # Keel specific configuration options
   keel:
     # Hostname of the Keel instance

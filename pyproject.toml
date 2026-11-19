@@ -46,6 +46,9 @@ fuzzywuzzy = "*"
 python-Levenshtein = "*"
 kubernetes = ">=37"
 pyyaml = "*"
+sqlalchemy = ">=2"
+alembic = ">=1.13"
+psycopg = { extras = ["binary"], version = ">=3" }
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"

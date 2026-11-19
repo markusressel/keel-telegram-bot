@@ -57,6 +57,8 @@ checks the `HelmChart` objects (`helm.cattle.io/v1`) of the
   `kube-prometheus-stack` with `crds.upgradeJob.enabled: true`.
 * Announced and ignored versions are stored in `helm_charts.state_path`. Put this file on a persistent volume,
   otherwise pending updates are announced again after a restart and ignored versions are forgotten.
+  An upgrade that is running during a restart is stored in the database (see below) and watched again
+  afterwards, so its notification does not stay on "Upgrading to ..." forever.
 * Only users in `telegram.admin_usernames` can press the buttons, in one of the `telegram.chat_ids`.
   The per-chat `filters` apply to the identifier `helmchart/<targetNamespace>/<name>`.
 
@@ -112,6 +114,20 @@ to provide configuration via a YAML file as well as ENV variables. Have a look a
 
 See [keel-telegram-bot_example.yaml](/keel-telegram-bot_example.yaml) for an example in this repo.
 
+## Database
+
+The bot keeps a little state in a database: the Telegram messages of approval notifications (so their buttons
+follow the approval, also after a restart), which approval was announced in which chat (so an approval that
+appeared while the bot was down is announced afterwards, and none twice) and running Helm chart upgrades.
+
+`database.url` is a [SQLAlchemy URL](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls):
+
+* SQLite (default, `sqlite:///keel-telegram-bot.db`): a file, nothing to set up. Put it on a persistent volume.
+* PostgreSQL: `postgresql://user:password@host:5432/database`, for an existing server.
+
+The schema is created and updated on start (Alembic). The first start with a new database does not announce
+the approvals that are pending at that moment, they were announced before.
+
 ## Run
 
 To run **keel-telegram-bot** using docker you can use the [ghcr.io/markusressel/keel-telegram-bot](https://github.com/markusressel/keel-telegram-bot/pkgs/container/keel-telegram-bot) image:
@@ -128,9 +144,11 @@ docker run -d --name keel-telegram-bot --restart unless-stopped \
 * `keel-telegram-bot.yaml` holds the configuration, see above.
 * Port `5000` receives the notifications of Keel. Point Keel's `WEBHOOK_ENDPOINT` at it,
   f.ex. `http://<host>:5000/`.
-* `/app/data` keeps the state of the Helm chart updates. Set `helm_charts.state_path` to
-  `/app/data/helm-chart-state.json`. Without a volume, pending updates are announced again after a
-  restart and ignored versions are forgotten.
+* `/app/data` keeps the state of the Helm chart updates and the SQLite database. Set
+  `helm_charts.state_path` to `/app/data/helm-chart-state.json` and `database.url` to
+  `sqlite:////app/data/keel-telegram-bot.db`. Without a volume, pending Helm chart updates are announced
+  again after a restart, ignored versions are forgotten, the buttons of open approval messages stay as they
+  are and approvals that appeared while the bot was down are not announced.
 
 Keel needs a volume too: it keeps its approvals in `/data/keel.db`. Without a volume, every restart
 of Keel loses the pending approvals, and Keel sends all of them again with new ids, so the bot
