@@ -114,6 +114,16 @@ to provide configuration via a YAML file as well as ENV variables. Have a look a
 
 See [keel-telegram-bot_example.yaml](/keel-telegram-bot_example.yaml) for an example in this repo.
 
+## Notifications
+
+A new approval is announced in a short form: Keel's message with the versions, the votes (only when more
+than one is required or some were given) and the expiry time. The approval id is in the data of the buttons,
+so the message does not need to show it. `/approvals` and the other commands list all properties
+(id, identifier, versions, votes, expiry).
+
+Times are shown in the local time zone of the bot. Set the `TZ` environment variable (f.ex.
+`TZ=Europe/Berlin`), the default is UTC.
+
 ## Database
 
 The bot keeps a little state in a database: the Telegram messages of approval notifications (so their buttons

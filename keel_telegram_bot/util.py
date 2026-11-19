@@ -147,32 +147,56 @@ def approval_signature(data: Approval) -> str:
     return f"{int(data.archived)}|{int(data.rejected)}|{data.votesReceived}/{data.votesRequired}"
 
 
-def approval_to_str(data: Approval) -> str:
-    id = data.id
-    identifier = data.identifier
-    current_version = data.currentVersion
-    new_version = data.newVersion
-    votes_required = data.votesRequired
-    votes_received = data.votesReceived
-    deadline = data.deadline
-    message = data.message
+def approval_button_data(action: str, approval_id: str) -> str:
+    """
+    Button data that carries the approval id, so a button does not depend on the text of its message.
+    Telegram allows 64 bytes, a Keel approval id is a 36 character UUID.
+    :param action: BUTTON_DATA_APPROVE or BUTTON_DATA_REJECT
+    """
+    return f"{action}:{approval_id}"
 
-    now_utc = datetime.now().replace(microsecond=0).astimezone(tz=timezone.utc)
-    deadline_diff = timedelta(seconds=(deadline.replace(microsecond=0) - now_utc).total_seconds())
+
+def parse_approval_button_data(data: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    :return: the action and the approval id of a button. The id is None for the buttons of older messages
+    (plain "a" and "r"), their approval is in the text of the message.
+    """
+    action, _, approval_id = data.partition(":")
+    return action, (approval_id or None)
+
+
+def approval_to_str(data: Approval, detailed: bool = False) -> str:
+    """
+    :param data: the approval
+    :param detailed: True to show all properties, False for the short form used in notifications
+    """
+    # Keel formats the deadline in UTC, show it in the local time zone (TZ environment variable)
+    deadline = data.deadline.astimezone()
+    now = datetime.now().replace(microsecond=0).astimezone()
+    deadline_diff = timedelta(seconds=(deadline.replace(microsecond=0) - now).total_seconds())
 
     deadline_abs_str = deadline.strftime('%m/%d %H:%M:%S')
     deadline_remaining_str = deadline_diff_to_str(deadline_diff)
+    versions = f"{data.currentVersion} -> {data.newVersion}"
 
-    text = "\n".join([
-        f"<b>{message}</b>",
-        f"Id: {id}",
-        f"Identifier: {identifier}",
-        f"Version: {current_version} -> {new_version}",
-        f"Votes: {votes_received}/{votes_required}",
-        f"Expires: {deadline_abs_str} ({deadline_remaining_str})"
-    ])
+    if detailed:
+        return "\n".join([
+            f"<b>{html.escape(data.message)}</b>",
+            f"Id: {data.id}",
+            f"Identifier: {data.identifier}",
+            f"Version: {versions}",
+            f"Votes: {data.votesReceived}/{data.votesRequired}",
+            f"Expires: {deadline_abs_str} ({deadline_remaining_str})"
+        ])
 
-    return text
+    title = html.escape(data.message)
+    if data.currentVersion not in data.message or data.newVersion not in data.message:
+        title += f" ({html.escape(versions)})"
+    lines = [f"<b>{title}</b>"]
+    if data.votesRequired > 1 or data.votesReceived > 0:
+        lines.append(f"Votes: {data.votesReceived}/{data.votesRequired}")
+    lines.append(f"Expires: {deadline_abs_str} ({deadline_remaining_str})")
+    return "\n".join(lines)
 
 
 def resource_to_str(r: Resource) -> str:

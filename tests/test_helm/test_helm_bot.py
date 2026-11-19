@@ -6,6 +6,7 @@ from unittest.mock import Mock, AsyncMock, MagicMock
 from keel_telegram_bot.bot import KeelTelegramBot
 from keel_telegram_bot.client.api_client import KeelApiClient
 from keel_telegram_bot.const import BUTTON_DATA_APPROVE, BUTTON_DATA_REJECT
+from keel_telegram_bot.util import approval_button_data
 from keel_telegram_bot.helm.chart import HelmChart
 from keel_telegram_bot.helm.checker import HelmChartCheckResult, HelmChartUpdateChecker
 from keel_telegram_bot.helm.client import HelmChartClient
@@ -157,12 +158,13 @@ class HelmBotTest(TestBase):
         self.client.get_helm_chart.assert_not_called()
         self.client.set_version.assert_not_called()
 
-    def _click_approval(self, data: str, username="myadminuser", chat_id=12345678):
+    def _click_approval(self, data: str, username="myadminuser", chat_id=12345678,
+                        text="Approval request\nId: abc\nIdentifier: deployment/default/app:1.2.3"):
         update = MagicMock()
         update.callback_query.data = data
         update.callback_query.from_user.username = username
         update.effective_chat.id = chat_id
-        update.effective_message.text = "Approval request\nId: abc\nIdentifier: deployment/default/app:1.2.3"
+        update.effective_message.text = text
         update.effective_message.message_id = 7
         update.effective_message.edit_text = AsyncMock()
         context = MagicMock()
@@ -175,6 +177,28 @@ class HelmBotTest(TestBase):
 
         self.bot._api_client.approve.assert_called_once()
         self.assertEqual(("abc", "deployment/default/app:1.2.3"), self.bot._api_client.approve.call_args.args[:2])
+
+    def test_approve_by_id_in_button_data_uses_the_remembered_message(self):
+        self.bot._store.register(12345678, 7, "xyz", "deployment/ns/other:2.0.0")
+
+        self._click_approval(approval_button_data(BUTTON_DATA_APPROVE, "xyz"), text="a short notification")
+
+        self.assertEqual(("xyz", "deployment/ns/other:2.0.0"), self.bot._api_client.approve.call_args.args[:2])
+
+    def test_reject_by_id_asks_keel_for_an_unknown_message(self):
+        self.bot._api_client.get_approvals.return_value = [Mock(id="xyz", identifier="deployment/ns/other:2.0.0")]
+
+        self._click_approval(approval_button_data(BUTTON_DATA_REJECT, "xyz"), text="a short notification")
+
+        self.assertEqual(("xyz", "deployment/ns/other:2.0.0"), self.bot._api_client.reject.call_args.args[:2])
+
+    def test_approval_that_does_not_exist_anymore(self):
+        self.bot._api_client.get_approvals.return_value = []
+
+        _, context = self._click_approval(approval_button_data(BUTTON_DATA_APPROVE, "gone"), text="x")
+
+        self.assertIn("does not exist", context.bot.answer_callback_query.call_args.kwargs["text"])
+        self.bot._api_client.approve.assert_not_called()
 
     def test_approve_unauthorized(self):
         for kwargs in [{"username": "someoneelse"}, {"chat_id": 999}]:
