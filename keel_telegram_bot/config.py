@@ -65,6 +65,18 @@ class Config(ConfigBase):
         required=True
     )
 
+    TELEGRAM_APPROVAL_MESSAGES_STATE_PATH = StringConfigEntry(
+        description="File to remember the messages of approval notifications in, so their buttons are still "
+                    "updated after a restart",
+        key_path=[
+            NODE_MAIN,
+            NODE_TELEGRAM,
+            "approval_messages_state_path"
+        ],
+        default="approval-messages-state.json",
+        required=True,
+    )
+
     TELEGRAM_ADMIN_USERNAMES = ListConfigEntry(
         item_type=StringConfigEntry,
         key_path=[

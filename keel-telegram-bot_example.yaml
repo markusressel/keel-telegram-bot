@@ -26,6 +26,9 @@ keel-telegram-bot:
     admin_usernames:
       - myadminuser
       - myotheradminuser
+    # File to remember the messages of approval notifications in, so their buttons are still updated after
+    # a restart. Put it on a persistent volume
+    approval_messages_state_path: /app/data/approval-messages-state.json
     # Telegram bot token
     bot_token: 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
     # List of Telegram chat IDs to send notifications to

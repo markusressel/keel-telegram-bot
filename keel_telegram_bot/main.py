@@ -7,6 +7,7 @@ from container_app_conf.formatter.toml import TomlFormatter
 from prometheus_client import start_http_server
 
 from keel_telegram_bot.bot import KeelTelegramBot
+from keel_telegram_bot.bot.message_state import ApprovalMessageState
 from keel_telegram_bot.client.api_client import KeelApiClient
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.helm.checker import HelmChartUpdateChecker
@@ -58,7 +59,10 @@ def main():
         )
         helm_chart_state = HelmChartState(config.HELM_CHARTS_STATE_PATH.value)
 
-    bot = KeelTelegramBot(config, api_client, helm_chart_client, helm_chart_checker, helm_chart_state)
+    approval_message_state = ApprovalMessageState(config.TELEGRAM_APPROVAL_MESSAGES_STATE_PATH.value)
+
+    bot = KeelTelegramBot(config, api_client, helm_chart_client, helm_chart_checker, helm_chart_state,
+                          approval_message_state)
     monitor = Monitor(config, api_client, bot)
     server = WebsocketServer(config, bot)
 

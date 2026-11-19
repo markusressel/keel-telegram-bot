@@ -57,6 +57,8 @@ checks the `HelmChart` objects (`helm.cattle.io/v1`) of the
   `kube-prometheus-stack` with `crds.upgradeJob.enabled: true`.
 * Announced and ignored versions are stored in `helm_charts.state_path`. Put this file on a persistent volume,
   otherwise pending updates are announced again after a restart and ignored versions are forgotten.
+  An upgrade that is running during a restart is stored there too and watched again afterwards, so its
+  notification does not stay on "Upgrading to ..." forever.
 * Only users in `telegram.admin_usernames` can press the buttons, in one of the `telegram.chat_ids`.
   The per-chat `filters` apply to the identifier `helmchart/<targetNamespace>/<name>`.
 
@@ -128,9 +130,10 @@ docker run -d --name keel-telegram-bot --restart unless-stopped \
 * `keel-telegram-bot.yaml` holds the configuration, see above.
 * Port `5000` receives the notifications of Keel. Point Keel's `WEBHOOK_ENDPOINT` at it,
   f.ex. `http://<host>:5000/`.
-* `/app/data` keeps the state of the Helm chart updates. Set `helm_charts.state_path` to
-  `/app/data/helm-chart-state.json`. Without a volume, pending updates are announced again after a
-  restart and ignored versions are forgotten.
+* `/app/data` keeps the state of the Helm chart updates and the list of approval messages. Set
+  `helm_charts.state_path` to `/app/data/helm-chart-state.json` and `telegram.approval_messages_state_path`
+  to `/app/data/approval-messages-state.json`. Without a volume, pending updates are announced again after a
+  restart, ignored versions are forgotten and the buttons of open approval messages stay as they are.
 
 Keel needs a volume too: it keeps its approvals in `/data/keel.db`. Without a volume, every restart
 of Keel loses the pending approvals, and Keel sends all of them again with new ids, so the bot
