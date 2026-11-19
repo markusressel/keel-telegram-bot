@@ -6,6 +6,7 @@ from unittest.mock import Mock, AsyncMock, MagicMock, patch
 
 from keel_telegram_bot.bot import KeelTelegramBot
 from keel_telegram_bot.client.api_client import KeelApiClient
+from keel_telegram_bot.db import Store
 from keel_telegram_bot.helm.chart import HelmChart
 from keel_telegram_bot.helm.checker import HelmChartUpdateChecker
 from keel_telegram_bot.helm.client import HelmChartClient, InstallJobResult, InstallJobStatus
@@ -32,10 +33,11 @@ class HelmUpgradeResumeTest(TestBase):
 
     def setUp(self):
         self._dir = tempfile.TemporaryDirectory()
+        self.store = Store()
         self.state = HelmChartState(os.path.join(self._dir.name, "state.json"))
         self.client = Mock(spec=HelmChartClient)
         self.bot = KeelTelegramBot(_config(), Mock(spec=KeelApiClient), self.client,
-                                   Mock(spec=HelmChartUpdateChecker), self.state)
+                                   Mock(spec=HelmChartUpdateChecker), self.state, self.store)
         self.telegram = Mock()
         self.telegram.edit_message_reply_markup = AsyncMock()
         self._bot_property = type(self.bot).bot
@@ -50,17 +52,17 @@ class HelmUpgradeResumeTest(TestBase):
         return [b.text for row in call.kwargs["reply_markup"].inline_keyboard for b in row]
 
     def test_watch_reports_outcome_and_forgets_the_upgrade(self):
-        self.state.add_pending_upgrade("loki", "20.3.0", 123, 7)
+        self.store.add_pending_upgrade("loki", "20.3.0", 123, 7)
         self.client.wait_for_install_job.return_value = InstallJobResult(InstallJobStatus.SUCCEEDED, "done", None)
 
         with patch("keel_telegram_bot.bot.send_message", new=AsyncMock()):
             asyncio.run(self.bot._watch_helm_chart_upgrade(self.telegram, _chart(), "20.3.0", 123, 7))
 
         self.assertEqual(["Upgraded to 20.3.0"], self._buttons(self.telegram.edit_message_reply_markup.call_args))
-        self.assertEqual([], self.state.pending_upgrades())
+        self.assertEqual([], self.store.pending_upgrades())
 
     def test_failed_watch_does_not_leave_the_upgrade_pending(self):
-        self.state.add_pending_upgrade("loki", "20.3.0", 123, 7)
+        self.store.add_pending_upgrade("loki", "20.3.0", 123, 7)
         self.client.wait_for_install_job.side_effect = RuntimeError("cluster unreachable")
 
         with patch("keel_telegram_bot.bot.send_message", new=AsyncMock()):
@@ -68,10 +70,10 @@ class HelmUpgradeResumeTest(TestBase):
 
         self.assertEqual(["Upgrade to 20.3.0 unknown"],
                          self._buttons(self.telegram.edit_message_reply_markup.call_args))
-        self.assertEqual([], self.state.pending_upgrades())
+        self.assertEqual([], self.store.pending_upgrades())
 
     def test_resume_watches_pending_upgrades(self):
-        self.state.add_pending_upgrade("loki", "20.3.0", 123, 7)
+        self.store.add_pending_upgrade("loki", "20.3.0", 123, 7)
         self.client.get_helm_chart.return_value = _chart()
         self.client.wait_for_install_job.return_value = InstallJobResult(InstallJobStatus.FAILED, "failed", "log")
 
@@ -84,15 +86,15 @@ class HelmUpgradeResumeTest(TestBase):
 
         self.assertEqual(["Upgrade to 20.3.0 failed"],
                          self._buttons(self.telegram.edit_message_reply_markup.call_args))
-        self.assertEqual([], self.state.pending_upgrades())
+        self.assertEqual([], self.store.pending_upgrades())
 
     def test_resume_gives_up_on_unknown_chart(self):
-        self.state.add_pending_upgrade("gone", "1.0.0", 123, 7)
+        self.store.add_pending_upgrade("gone", "1.0.0", 123, 7)
         self.client.get_helm_chart.side_effect = KeyError("gone")
 
         asyncio.run(self.bot._resume_helm_chart_upgrades())
 
         self.assertEqual(["Upgrade to 1.0.0 unknown"],
                          self._buttons(self.telegram.edit_message_reply_markup.call_args))
-        self.assertEqual([], self.state.pending_upgrades())
+        self.assertEqual([], self.store.pending_upgrades())
         self.client.wait_for_install_job.assert_not_called()

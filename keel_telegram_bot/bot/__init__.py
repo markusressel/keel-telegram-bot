@@ -15,7 +15,7 @@ from telegram_click.decorator import command
 from telegram_click.error_handler import DefaultErrorHandler
 
 from keel_telegram_bot import util
-from keel_telegram_bot.bot.message_state import ApprovalMessage, ApprovalMessageState
+from keel_telegram_bot.db import ApprovalMessage, Store
 from keel_telegram_bot.bot.permissions import CONFIG_ADMINS, CONFIGURED_CHAT_ID
 from keel_telegram_bot.bot.reply_keyboard_handler import ReplyKeyboardHandler
 from keel_telegram_bot.client.api_client import KeelApiClient
@@ -58,22 +58,22 @@ class KeelTelegramBot:
                  helm_chart_client: Optional[HelmChartClient] = None,
                  helm_chart_checker: Optional[HelmChartUpdateChecker] = None,
                  helm_chart_state: Optional[HelmChartState] = None,
-                 approval_message_state: Optional[ApprovalMessageState] = None):
+                 store: Optional[Store] = None):
         """
         Creates an instance.
         :param config: configuration object
         :param helm_chart_client: HelmChart client, None if helm chart updates are disabled
         :param helm_chart_checker: HelmChart update checker, None if helm chart updates are disabled
         :param helm_chart_state: announced/ignored helm chart versions, None if helm chart updates are disabled
-        :param approval_message_state: the messages of approval notifications, to keep their buttons up to date,
-        None to remember them only until the next restart
+        :param store: persistent state (approval messages, announced approvals, running helm chart upgrades),
+        None to remember it only until the next restart
         """
         self._config = config
         self._api_client = api_client
         self._helm_chart_client = helm_chart_client
         self._helm_chart_checker = helm_chart_checker
         self._helm_chart_state = helm_chart_state
-        self._approval_messages = approval_message_state or ApprovalMessageState()
+        self._store = store or Store()
         self._background_tasks = set()
 
         self._response_handler = ReplyKeyboardHandler()
@@ -759,20 +759,25 @@ class KeelTelegramBot:
                 menu=None
             )
 
-    async def on_new_pending_approval(self, item: Approval):
+    async def on_new_pending_approval(self, item: Approval) -> bool:
         """
-        Handles new pending approvals by sending a message
-        including an inline keyboard to all configured chat ids
-        :param item: new pending approval
+        Handles pending approvals by sending a message including an inline keyboard to all configured chat ids
+        that did not get one for this approval yet, so an approval is announced exactly once per chat, also
+        when it appeared while the bot was down.
+        :param item: pending approval
+        :return: True if a message was sent
         """
         identifier = item.identifier
         text = approval_to_str(item)
         menu = self.create_approval_notification_menu(item)
+        sent = False
 
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
 
             if self._is_filtered_for(chat_id, identifier):
                 LOGGER.debug(f"Skipping new pending approval for chat '{chat_id}' due to filters")
+                continue
+            if self._store.is_announced(item.id, int(chat_id)):
                 continue
 
             LOGGER.debug(f"Sending pending approval message to '{chat_id}'")
@@ -783,8 +788,11 @@ class KeelTelegramBot:
                     menu=menu
                 )
                 self._register_message(response.chat_id, response.message_id, item)
+                self._store.mark_announced(item.id, int(chat_id))
+                sent = True
             except Exception as ex:
                 LOGGER.exception(ex)
+        return sent
 
     @command(
         name=COMMAND_CONFIG,
@@ -903,7 +911,7 @@ class KeelTelegramBot:
 
             # Make sure this message gets updated, also when it was sent before the last restart of the bot
             # and the state of that time is lost, or when the bot never knew it.
-            self._approval_messages.register(update.effective_chat.id, update.effective_message.message_id,
+            self._store.register(update.effective_chat.id, update.effective_message.message_id,
                                              approval_id, approval_identifier)
 
             if data == BUTTON_DATA_APPROVE:
@@ -981,8 +989,7 @@ class KeelTelegramBot:
             await bot.answer_callback_query(query_id, text=f"Upgrading {name} to {version}")
             await message.edit_reply_markup(
                 self._build_inline_keyboard({f"Upgrading to {version}...": BUTTON_DATA_NOTHING}))
-            if self._helm_chart_state is not None:
-                self._helm_chart_state.add_pending_upgrade(name, version, chat_id, message.message_id)
+            self._store.add_pending_upgrade(name, version, chat_id, message.message_id)
             context.application.create_task(
                 self._watch_helm_chart_upgrade(bot, chart, version, chat_id, message.message_id))
         except Exception as e:
@@ -1017,8 +1024,7 @@ class KeelTelegramBot:
         try:
             await self._report_helm_chart_upgrade(bot, chart, version, chat_id, message_id)
         finally:
-            if self._helm_chart_state is not None:
-                self._helm_chart_state.remove_pending_upgrade(chat_id, message_id)
+            self._store.remove_pending_upgrade(chat_id, message_id)
 
     async def _report_helm_chart_upgrade(self, bot, chart: HelmChart, version: str, chat_id: int, message_id: int):
         try:
@@ -1061,17 +1067,17 @@ class KeelTelegramBot:
         Picks up the upgrades that were started from Telegram before the last restart of the bot, so their
         notification does not show "Upgrading to ..." forever
         """
-        if self._helm_chart_client is None or self._helm_chart_state is None:
+        if self._helm_chart_client is None:
             return
-        for pending in self._helm_chart_state.pending_upgrades():
-            name, version = pending["name"], pending["version"]
-            chat_id, message_id = pending["chat_id"], pending["message_id"]
+        for pending in self._store.pending_upgrades():
+            name, version = pending.name, pending.version
+            chat_id, message_id = pending.chat_id, pending.message_id
             try:
                 chart = await asyncio.to_thread(self._helm_chart_client.get_helm_chart, name)
             except Exception as ex:
                 LOGGER.warning(f"Cannot resume the upgrade of '{name}' to {version}: {ex}")
                 await self._set_helm_chart_button(self.bot, chat_id, message_id, f"Upgrade to {version} unknown")
-                self._helm_chart_state.remove_pending_upgrade(chat_id, message_id)
+                self._store.remove_pending_upgrade(chat_id, message_id)
                 continue
             LOGGER.info(f"Resuming to watch the upgrade of '{name}' to {version}")
             task = asyncio.create_task(
@@ -1130,7 +1136,7 @@ class KeelTelegramBot:
         :param message_id: message id
         :param approval: the approval the message shows
         """
-        self._approval_messages.register(chat_id, message_id, approval.id, approval.identifier,
+        self._store.register(chat_id, message_id, approval.id, approval.identifier,
                                          approval_signature(approval))
 
     async def update_messages(self):
@@ -1139,8 +1145,8 @@ class KeelTelegramBot:
         A message is only edited when the approval changed since the message was last written, because edits
         are rate limited by Telegram and an unchanged message is refused with "message is not modified".
         """
-        self._approval_messages.prune()
-        messages = self._approval_messages.all()
+        self._store.prune()
+        messages = self._store.all()
         if len(messages) == 0:
             return
 
@@ -1155,17 +1161,17 @@ class KeelTelegramBot:
                 if approval is None:
                     # Keel deletes an approval after its deadline, so there is nothing to approve anymore
                     await self._edit_approval_message(message, None, None)
-                    self._approval_messages.remove(message)
+                    self._store.remove(message)
                     continue
 
                 signature = approval_signature(approval)
                 if signature != message.signature:
                     await self._edit_approval_message(message, approval_to_str(approval),
                                                       self.create_approval_notification_menu(approval))
-                    self._approval_messages.update(message, signature=signature, failures=0)
+                    self._store.update(message, signature=signature, failures=0)
                 if approval.archived or approval.rejected:
                     # decided, the message shows the outcome and has nothing left to update
-                    self._approval_messages.remove(message)
+                    self._store.remove(message)
             except RetryAfter as ex:
                 # Telegram asks to slow down: everything else would fail too, try again at the next run
                 LOGGER.warning(f"Telegram rate limit reached, updating approval messages again later: {ex}")
@@ -1211,11 +1217,11 @@ class KeelTelegramBot:
         if permanent or failures >= MAX_EDIT_FAILURES:
             LOGGER.warning(f"Cannot update message {message.message_id} in chat {message.chat_id}, "
                            f"not trying again: {ex}")
-            self._approval_messages.remove(message)
+            self._store.remove(message)
         else:
             LOGGER.warning(f"Cannot update message {message.message_id} in chat {message.chat_id} "
                            f"(attempt {failures} of {MAX_EDIT_FAILURES}): {ex}")
-            self._approval_messages.update(message, failures=failures)
+            self._store.update(message, failures=failures)
 
     def _is_button_press_allowed(self, update: Update) -> bool:
         """

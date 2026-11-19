@@ -65,15 +65,19 @@ class Config(ConfigBase):
         required=True
     )
 
-    TELEGRAM_APPROVAL_MESSAGES_STATE_PATH = StringConfigEntry(
-        description="File to remember the messages of approval notifications in, so their buttons are still "
-                    "updated after a restart",
+    DATABASE_URL = StringConfigEntry(
+        description="SQLAlchemy URL of the database that keeps the state of the bot (approval messages, announced "
+                    "approvals, running helm chart upgrades). SQLite file or PostgreSQL, "
+                    "e.g. postgresql://user:password@host:5432/keel_bot. The schema is created and updated "
+                    "automatically.",
         key_path=[
             NODE_MAIN,
-            NODE_TELEGRAM,
-            "approval_messages_state_path"
+            "database",
+            "url"
         ],
-        default="approval-messages-state.json",
+        default="sqlite:///keel-telegram-bot.db",
+        example="postgresql://keel:secret@postgres.postgres:5432/keel_telegram_bot",
+        secret=True,
         required=True,
     )
 

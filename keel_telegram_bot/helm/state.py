@@ -11,18 +11,13 @@ LOGGER = logging.getLogger(__name__)
 KEY_CHARTS = "charts"
 KEY_ANNOUNCED = "announced"
 KEY_IGNORED = "ignored"
-KEY_UPGRADES = "upgrades"
 
 
 class HelmChartState:
     """
     Remembers which chart versions were already announced or ignored, persisted as a small JSON file:
 
-    {"charts": {"<helmchart name>": {"announced": ["1.2.3"], "ignored": ["2.0.0"]}},
-     "upgrades": [{"name": "<helmchart name>", "version": "1.2.3", "chat_id": 1, "message_id": 2}]}
-
-    "upgrades" are the upgrades started from Telegram whose outcome was not reported yet. After a restart of the bot
-    the notification of such an upgrade would show "Upgrading to ..." forever, so these are picked up again.
+    {"charts": {"<helmchart name>": {"announced": ["1.2.3"], "ignored": ["2.0.0"]}}}
     """
 
     def __init__(self, path: str):
@@ -79,32 +74,6 @@ class HelmChartState:
                 charts.pop(name)
             self._save()
 
-    def add_pending_upgrade(self, name: str, version: str, chat_id: int, message_id: int):
-        """
-        Remembers an upgrade that was started from a notification message and is not finished yet
-        """
-        with self._lock:
-            self.remove_pending_upgrade(chat_id, message_id, save=False)
-            self._data[KEY_UPGRADES].append(
-                {"name": name, "version": version, "chat_id": chat_id, "message_id": message_id})
-            self._save()
-
-    def remove_pending_upgrade(self, chat_id: int, message_id: int, save: bool = True):
-        with self._lock:
-            upgrades = self._data[KEY_UPGRADES]
-            remaining = [x for x in upgrades if not (x.get("chat_id") == chat_id and x.get("message_id") == message_id)]
-            if len(remaining) != len(upgrades):
-                self._data[KEY_UPGRADES] = remaining
-                if save:
-                    self._save()
-
-    def pending_upgrades(self) -> List[Dict]:
-        """
-        :return: the upgrades that were started and not finished, as dicts with name, version, chat_id and message_id
-        """
-        with self._lock:
-            return [dict(x) for x in self._data[KEY_UPGRADES]]
-
     def _add(self, name: str, key: str, versions: List[str]):
         with self._lock:
             entry = self._data[KEY_CHARTS].setdefault(name, {KEY_ANNOUNCED: [], KEY_IGNORED: []})
@@ -124,18 +93,16 @@ class HelmChartState:
 
     def _load(self) -> dict:
         if not os.path.exists(self._path):
-            return {KEY_CHARTS: {}, KEY_UPGRADES: []}
+            return {KEY_CHARTS: {}}
         try:
             with open(self._path, "r") as file:
                 data = json.load(file)
             if not isinstance(data, dict) or not isinstance(data.get(KEY_CHARTS), dict):
                 raise ValueError("unexpected content")
-            if not isinstance(data.get(KEY_UPGRADES), list):
-                data[KEY_UPGRADES] = []
             return data
         except Exception as ex:
             LOGGER.error(f"Cannot read helm chart state file '{self._path}', starting with an empty state: {ex}")
-            return {KEY_CHARTS: {}, KEY_UPGRADES: []}
+            return {KEY_CHARTS: {}}
 
     def _save(self):
         try:
@@ -144,9 +111,7 @@ class HelmChartState:
             # write to a temporary file first, so a crash never leaves a half written state file behind
             tmp_path = f"{self._path}.tmp"
             with open(tmp_path, "w") as file:
-                # the key of the upgrades is only written when there are any, which keeps the file as it was
-                data = {key: value for key, value in self._data.items() if key != KEY_UPGRADES or value}
-                json.dump(data, file, indent=2, sort_keys=True)
+                json.dump(self._data, file, indent=2, sort_keys=True)
             os.replace(tmp_path, self._path)
         except Exception as ex:
             LOGGER.error(f"Cannot write helm chart state file '{self._path}': {ex}")

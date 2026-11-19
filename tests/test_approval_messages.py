@@ -2,12 +2,12 @@ import asyncio
 import os
 import tempfile
 from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock, AsyncMock, MagicMock
+from unittest.mock import Mock, AsyncMock, MagicMock, patch
 
 from telegram.error import BadRequest, Forbidden, RetryAfter, TimedOut
 
 from keel_telegram_bot.bot import KeelTelegramBot, MAX_EDIT_FAILURES
-from keel_telegram_bot.bot.message_state import ApprovalMessageState
+from keel_telegram_bot.db import Store, normalize_url
 from keel_telegram_bot.client.api_client import KeelApiClient
 from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.client.types import Provider
@@ -36,63 +36,141 @@ def _approval(id="a1", identifier="deployment/ns/app:1.1.0", archived=False, rej
     )
 
 
-class ApprovalMessageStateTest(TestBase):
+class StoreMessagesTest(TestBase):
 
     def setUp(self):
         self._dir = tempfile.TemporaryDirectory()
-        self.path = os.path.join(self._dir.name, "state.json")
+        self.url = "sqlite:///" + os.path.join(self._dir.name, "sub", "state.db")
 
     def tearDown(self):
         self._dir.cleanup()
 
     def test_survives_restart(self):
-        state = ApprovalMessageState(self.path)
-        state.register(CHAT, 7, "a1", "deployment/ns/app:1.1.0", "0|0|0/1")
+        Store(self.url).register(CHAT, 7, "a1", "deployment/ns/app:1.1.0", "0|0|0/1")
 
-        restarted = ApprovalMessageState(self.path)
-        messages = restarted.all()
+        messages = Store(self.url).all()
         self.assertEqual(1, len(messages))
         self.assertEqual((CHAT, 7, "a1", "0|0|0/1"),
                          (messages[0].chat_id, messages[0].message_id, messages[0].approval_id,
                           messages[0].signature))
 
     def test_register_known_message_only_updates_it(self):
-        state = ApprovalMessageState(self.path)
-        state.register(CHAT, 7, "a1", "x", "old")
-        state.register(CHAT, 7, "a1", "x", "new")
-        self.assertEqual(["new"], [x.signature for x in state.all()])
+        store = Store(self.url)
+        store.register(CHAT, 7, "a1", "x", "old")
+        store.register(CHAT, 7, "a1", "x", "new")
+        self.assertEqual(["new"], [x.signature for x in store.all()])
 
     def test_remove(self):
-        state = ApprovalMessageState(self.path)
-        state.register(CHAT, 7, "a1", "x")
-        state.register(CHAT, 8, "a2", "y")
-        state.remove(state.find(CHAT, 7))
-        self.assertEqual([8], [x.message_id for x in ApprovalMessageState(self.path).all()])
+        store = Store(self.url)
+        store.register(CHAT, 7, "a1", "x")
+        store.register(CHAT, 8, "a2", "y")
+        store.remove(store.find(CHAT, 7))
+        self.assertEqual([8], [x.message_id for x in Store(self.url).all()])
 
     def test_prune_old_messages(self):
-        state = ApprovalMessageState(self.path, max_age=timedelta(days=1))
-        state.register(CHAT, 7, "a1", "x")
-        self.assertEqual(0, state.prune())
-        self.assertEqual(1, state.prune(now=datetime.now(timezone.utc) + timedelta(days=2)))
-        self.assertEqual([], state.all())
+        store = Store(self.url, max_age=timedelta(days=1))
+        store.register(CHAT, 7, "a1", "x")
+        self.assertEqual(0, store.prune())
+        self.assertEqual(1, store.prune(now=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=2)))
+        self.assertEqual([], store.all())
 
-    def test_broken_file_starts_empty(self):
-        with open(self.path, "w") as file:
-            file.write("{not json")
-        self.assertEqual([], ApprovalMessageState(self.path).all())
+    def test_migrating_twice_is_fine(self):
+        Store(self.url)
+        Store(self.url)
 
     def test_in_memory(self):
-        state = ApprovalMessageState()
-        state.register(CHAT, 7, "a1", "x")
-        self.assertEqual(1, len(state.all()))
+        store = Store()
+        store.register(CHAT, 7, "a1", "x")
+        self.assertEqual(1, len(store.all()))
+
+    def test_postgres_url_uses_psycopg3(self):
+        self.assertEqual("postgresql+psycopg://u:p@h/db", normalize_url("postgresql://u:p@h/db"))
+        self.assertEqual("postgresql+psycopg://u:p@h/db", normalize_url("postgres://u:p@h/db"))
+        self.assertEqual("sqlite:///x.db", normalize_url("sqlite:///x.db"))
+
+
+class StoreAnnouncedTest(TestBase):
+
+    def test_announced_per_chat(self):
+        store = Store()
+        self.assertFalse(store.is_announced("a1", CHAT))
+        store.mark_announced("a1", CHAT)
+        store.mark_announced("a1", CHAT)
+        self.assertTrue(store.is_announced("a1", CHAT))
+        self.assertFalse(store.is_announced("a1", 99))
+
+    def test_seed_once(self):
+        store = Store()
+        self.assertTrue(store.seed_announced(["a1", "a2"], [CHAT, 99]))
+        self.assertTrue(store.is_announced("a2", 99))
+        self.assertFalse(store.seed_announced(["a3"], [CHAT]))
+        self.assertFalse(store.is_announced("a3", CHAT))
+
+    def test_forget_finished_approvals(self):
+        store = Store()
+        store.mark_announced("a1", CHAT)
+        store.mark_announced("a2", CHAT)
+        store.forget_announced_except(["a2"])
+        self.assertFalse(store.is_announced("a1", CHAT))
+        self.assertTrue(store.is_announced("a2", CHAT))
+        store.forget_announced_except([])
+        self.assertFalse(store.is_announced("a2", CHAT))
+
+    def test_pending_helm_upgrades(self):
+        store = Store()
+        store.add_pending_upgrade("loki", "1.2.0", CHAT, 7)
+        store.add_pending_upgrade("loki", "1.3.0", CHAT, 7)
+        pending = store.pending_upgrades()
+        self.assertEqual([("loki", "1.3.0", CHAT, 7)],
+                         [(x.name, x.version, x.chat_id, x.message_id) for x in pending])
+        store.remove_pending_upgrade(CHAT, 7)
+        self.assertEqual([], store.pending_upgrades())
+
+
+class AnnounceTest(TestBase):
+
+    def setUp(self):
+        self.store = Store()
+        self.bot = KeelTelegramBot(_config(), Mock(spec=KeelApiClient), store=self.store)
+        self.bot._app = Mock()
+        self.telegram = Mock()
+        self._bot_patch = type(self.bot).bot
+        type(self.bot).bot = property(lambda _: self.telegram)
+
+    def tearDown(self):
+        type(self.bot).bot = self._bot_patch
+
+    def _announce(self, approval, send):
+        with patch("keel_telegram_bot.bot.send_message", new=send):
+            return asyncio.run(self.bot.on_new_pending_approval(approval))
+
+    def test_announces_once_per_chat_and_remembers_the_message(self):
+        send = AsyncMock(side_effect=[Mock(chat_id=CHAT, message_id=5), Mock(chat_id=-1001, message_id=6)])
+        self.assertTrue(self._announce(_approval(), send))
+        self.assertEqual(2, send.call_count)
+        self.assertEqual(2, len(self.store.all()))
+
+        self.assertFalse(self._announce(_approval(), send))
+        self.assertEqual(2, send.call_count)
+
+    def test_failed_chat_is_tried_again(self):
+        ok = Mock(chat_id=CHAT, message_id=5)
+        send = AsyncMock(side_effect=[ok, TimedOut("x")])
+        self._announce(_approval(), send)
+        self.assertTrue(self.store.is_announced("a1", CHAT))
+        self.assertFalse(self.store.is_announced("a1", -1001))
+
+        send = AsyncMock(return_value=Mock(chat_id=-1001, message_id=6))
+        self.assertTrue(self._announce(_approval(), send))
+        self.assertEqual(1, send.call_count)
 
 
 class UpdateMessagesTest(TestBase):
 
     def setUp(self):
         self.api = Mock(spec=KeelApiClient)
-        self.state = ApprovalMessageState()
-        self.bot = KeelTelegramBot(_config(), self.api, approval_message_state=self.state)
+        self.state = Store()
+        self.bot = KeelTelegramBot(_config(), self.api, store=self.state)
         self.bot._app = Mock()
         self.telegram = Mock()
         self.telegram.edit_message_text = AsyncMock()
