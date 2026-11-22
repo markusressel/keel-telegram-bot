@@ -14,6 +14,8 @@ from container_app_conf.source.toml_source import TomlSource
 from container_app_conf.source.yaml_source import YamlSource
 from voluptuous import Schema
 
+from keel_telegram_bot.helm.version import AUTO_UPGRADE_LEVELS
+
 NODE_MAIN = "keel-telegram-bot"
 
 NODE_TELEGRAM = "telegram"
@@ -265,8 +267,41 @@ class Config(ConfigBase):
         ]
     )
 
+    HELM_CHARTS_AUTO_UPGRADE = ListConfigEntry(
+        description="Update levels that are upgraded automatically, without pressing \"Upgrade\": "
+                    "\"minor\" and/or \"patch\", relative to the current version. Major updates are never "
+                    "upgraded automatically, \"major\" is rejected. Empty: every upgrade needs a button press",
+        item_type=StringConfigEntry,
+        item_args={"regex": f"^({'|'.join(AUTO_UPGRADE_LEVELS)})$"},
+        key_path=[
+            NODE_MAIN,
+            NODE_HELM_CHARTS,
+            "auto_upgrade"
+        ],
+        default=[],
+        example=[
+            "minor",
+            "patch"
+        ]
+    )
+
+    HELM_CHARTS_AUTO_UPGRADE_EXCLUDE = ListConfigEntry(
+        description="Names of HelmCharts that are never upgraded automatically, their updates are announced "
+                    "with an \"Upgrade\" button",
+        item_type=StringConfigEntry,
+        key_path=[
+            NODE_MAIN,
+            NODE_HELM_CHARTS,
+            "auto_upgrade_exclude"
+        ],
+        default=[],
+        example=[
+            "loki"
+        ]
+    )
+
     HELM_CHARTS_STATE_PATH = StringConfigEntry(
-        description="File to remember announced and ignored chart versions in",
+        description="File to remember announced, ignored and failed chart versions in",
         key_path=[
             NODE_MAIN,
             NODE_HELM_CHARTS,

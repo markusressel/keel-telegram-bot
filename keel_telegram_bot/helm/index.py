@@ -68,6 +68,8 @@ class HelmChartUpdate:
     newest: ChartVersion
     # newest version with the same major version as the current one, if it is newer than the current one
     newest_in_major: Optional[ChartVersion]
+    # newest version with the same major and minor version as the current one, if it is newer than the current one
+    newest_in_minor: Optional[ChartVersion] = None
 
     @property
     def is_major(self) -> bool:
@@ -82,6 +84,27 @@ class HelmChartUpdate:
         if self.newest_in_major is not None and self.newest_in_major.version != self.newest.version:
             result.append(self.newest_in_major.version)
         return result
+
+    def remaining_after(self, installed: ChartVersion) -> Optional["HelmChartUpdate"]:
+        """
+        :param installed: a version of this update that is installed now (f.ex. by an automatic upgrade)
+        :return: the newer versions that are still left after this upgrade, or None if there are none
+        """
+        if self.newest.semver <= installed.semver:
+            return None
+        newest_in_major = self.newest_in_major
+        if newest_in_major is not None and newest_in_major.semver <= installed.semver:
+            newest_in_major = None
+        newest_in_minor = self.newest_in_minor
+        if newest_in_minor is not None and newest_in_minor.semver <= installed.semver:
+            newest_in_minor = None
+        return HelmChartUpdate(
+            current_version=installed.version,
+            current=installed,
+            newest=self.newest,
+            newest_in_major=newest_in_major,
+            newest_in_minor=newest_in_minor,
+        )
 
 
 def fetch_index(repo: str) -> dict:
@@ -149,6 +172,8 @@ def find_update(current_version: str, versions: List[ChartVersion]) -> Optional[
     newest = max(candidates, key=lambda x: x.semver)
     same_major = [x for x in candidates if x.semver.major == current.major]
     newest_in_major = max(same_major, key=lambda x: x.semver) if same_major else None
+    same_minor = [x for x in same_major if x.semver.minor == current.minor]
+    newest_in_minor = max(same_minor, key=lambda x: x.semver) if same_minor else None
     current_entry = next((x for x in versions if x.semver == current), None)
 
     return HelmChartUpdate(
@@ -156,6 +181,7 @@ def find_update(current_version: str, versions: List[ChartVersion]) -> Optional[
         current=current_entry,
         newest=newest,
         newest_in_major=newest_in_major,
+        newest_in_minor=newest_in_minor,
     )
 
 

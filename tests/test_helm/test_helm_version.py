@@ -1,5 +1,5 @@
 from keel_telegram_bot.helm.index import ChartVersion, find_update
-from keel_telegram_bot.helm.version import SemVer
+from keel_telegram_bot.helm.version import SemVer, get_update_level
 from tests import TestBase
 
 
@@ -84,3 +84,36 @@ class HelmVersionTest(TestBase):
     def test_find_update_invalid_current(self):
         with self.assertRaises(ValueError):
             find_update("latest", _versions("1.0.0"))
+
+    def test_find_update_newest_in_minor(self):
+        update = find_update("1.2.3", _versions("1.2.4", "1.2.5", "1.3.0", "2.0.0"))
+        self.assertEqual("1.2.5", update.newest_in_minor.version)
+        self.assertEqual("1.3.0", update.newest_in_major.version)
+        self.assertIsNone(find_update("1.2.3", _versions("1.3.0")).newest_in_minor)
+
+    def test_remaining_after(self):
+        versions = _versions("1.2.5", "1.3.0", "2.0.0")
+        update = find_update("1.2.3", versions)
+
+        remaining = update.remaining_after(update.newest_in_minor)
+        self.assertEqual("1.2.5", remaining.current_version)
+        self.assertEqual("1.3.0", remaining.newest_in_major.version)
+        self.assertIsNone(remaining.newest_in_minor)
+        self.assertEqual(["2.0.0", "1.3.0"], remaining.offered_versions)
+
+        remaining = update.remaining_after(update.newest_in_major)
+        self.assertIsNone(remaining.newest_in_major)
+        self.assertEqual(["2.0.0"], remaining.offered_versions)
+
+        self.assertIsNone(find_update("1.2.3", _versions("1.3.0")).remaining_after(versions[1]))
+
+    def test_update_level(self):
+        def level(current: str, target: str) -> str:
+            return get_update_level(SemVer.parse(current), SemVer.parse(target))
+
+        self.assertEqual("patch", level("1.2.3", "1.2.4"))
+        self.assertEqual("patch", level("1.2.3-rc.1", "1.2.3"))
+        self.assertEqual("minor", level("1.2.3", "1.3.0"))
+        self.assertEqual("minor", level("1.2.3", "1.10.1"))
+        self.assertEqual("major", level("1.2.3", "2.0.0"))
+        self.assertEqual("major", level("0.9.0", "1.0.0"))

@@ -77,3 +77,25 @@ class SemVer:
         if self.is_prerelease:
             text += "-" + ".".join(self.prerelease)
         return text
+
+
+UPGRADE_LEVEL_MAJOR = "major"
+UPGRADE_LEVEL_MINOR = "minor"
+UPGRADE_LEVEL_PATCH = "patch"
+
+# update levels that may be upgraded automatically, major updates need manual steps
+AUTO_UPGRADE_LEVELS = (UPGRADE_LEVEL_MINOR, UPGRADE_LEVEL_PATCH)
+
+
+def get_update_level(current: SemVer, target: SemVer) -> str:
+    """
+    :param current: the current version
+    :param target: a newer version
+    :return: the level of the update from current to target: "major", "minor" or "patch"
+    (also for pre-release changes within the same major.minor)
+    """
+    if target.major != current.major:
+        return UPGRADE_LEVEL_MAJOR
+    if target.minor != current.minor:
+        return UPGRADE_LEVEL_MINOR
+    return UPGRADE_LEVEL_PATCH

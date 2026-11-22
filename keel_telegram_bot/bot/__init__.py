@@ -1,8 +1,9 @@
 import asyncio
+import dataclasses
 import html
 import logging
 import re
-from typing import Dict, Optional
+from typing import Dict, List, Optional, Tuple
 
 from container_app_conf.formatter.toml import TomlFormatter
 from requests import HTTPError
@@ -27,12 +28,13 @@ from keel_telegram_bot.config import Config
 from keel_telegram_bot.helm.chart import HelmChart, SkipReason
 from keel_telegram_bot.helm.checker import HelmChartUpdateChecker, HelmChartCheckResult
 from keel_telegram_bot.helm.client import HelmChartClient, InstallJobStatus
-from keel_telegram_bot.helm.index import HelmChartUpdate
+from keel_telegram_bot.helm.index import ChartVersion, HelmChartUpdate
 from keel_telegram_bot.helm.state import HelmChartState
-from keel_telegram_bot.helm.version import SemVer
+from keel_telegram_bot.helm.version import SemVer, get_update_level
 from keel_telegram_bot.stats import *
 from keel_telegram_bot.util import send_message, approval_to_str, approval_signature, resource_to_str, approval_button_data, parse_approval_button_data, \
-    tracked_image_to_str, helm_chart_update_to_str, helm_chart_check_result_to_str
+    tracked_image_to_str, helm_chart_update_to_str, helm_chart_check_result_to_str, \
+    helm_chart_auto_upgrade_to_str
 
 LOGGER = logging.getLogger(__name__)
 
@@ -668,10 +670,11 @@ class KeelTelegramBot:
     async def on_helm_chart_check_results(self, results: List[HelmChartCheckResult],
                                           force: bool = False) -> List[HelmChartCheckResult]:
         """
-        Sends a notification for each HelmChart with a new version, unless it was already announced or ignored
+        Upgrades HelmCharts automatically if allowed by helm_charts.auto_upgrade, and sends a notification for
+        each HelmChart with a new version, unless it was already announced or ignored
         :param results: results of a HelmChart update check
         :param force: notify again about versions that were already announced (but not ignored)
-        :return: results that a notification was sent for
+        :return: results that a notification was sent for (including automatic upgrades)
         """
         notified = []
         for result in results:
@@ -682,9 +685,20 @@ class KeelTelegramBot:
             # forget versions that are installed by now
             self._helm_chart_state.prune(chart.name, chart.version)
 
-            if result.update is None:
+            update = result.update
+            if update is None:
                 continue
-            versions = result.update.offered_versions
+
+            target = self._get_auto_upgrade_target(chart, update)
+            if target is not None and await self._auto_upgrade_helm_chart(chart, update, target):
+                notified.append(result)
+                # announce what is left, f.ex. a major update, relative to the version installed now
+                update = update.remaining_after(target)
+                if update is None:
+                    continue
+                chart = dataclasses.replace(chart, version=target.version)
+
+            versions = update.offered_versions
             if force:
                 if all(map(lambda x: self._helm_chart_state.is_ignored(chart.name, x), versions)):
                     continue
@@ -692,10 +706,94 @@ class KeelTelegramBot:
                 LOGGER.debug(f"Already announced helm chart versions {versions} of '{chart.name}'")
                 continue
 
-            await self.on_new_helm_chart_update(chart, result.update)
+            await self.on_new_helm_chart_update(chart, update)
             self._helm_chart_state.mark_announced(chart.name, versions)
-            notified.append(result)
+            if result not in notified:
+                notified.append(result)
         return notified
+
+    def _get_auto_upgrade_target(self, chart: HelmChart, update: HelmChartUpdate) -> Optional[ChartVersion]:
+        """
+        Determines the version a chart is upgraded to automatically
+        :return: the version, or None if the update needs a button press (or is only announced)
+        """
+        levels = self._config.HELM_CHARTS_AUTO_UPGRADE.value or []
+        if len(levels) == 0:
+            return None
+        if chart.name in (self._config.HELM_CHARTS_AUTO_UPGRADE_EXCLUDE.value or []):
+            return None
+        if chart.get_manual_upgrade_reason(self._config.HELM_CHARTS_NOTIFY_ONLY.value) is not None:
+            return None
+        if not any(map(lambda x: not self._is_filtered_for(x, chart.identifier), self._config.TELEGRAM_CHAT_IDS.value)):
+            # nobody would be told about the upgrade
+            return None
+        if any(map(lambda x: x.name == chart.name, self._store.pending_upgrades())):
+            # an upgrade of this chart is running already
+            return None
+        current = SemVer.parse(chart.version)
+        if current is None:
+            return None
+
+        # the newest version within the current major version first, then within the current minor version,
+        # f.ex. 1.2.5 for 1.2.3 if 1.3.0 is available too, but only patch updates are allowed
+        candidates = (update.newest_in_major, update.newest_in_minor)
+        return next((x for x in candidates if self._is_auto_upgrade_allowed(chart, current, x, levels)), None)
+
+    def _is_auto_upgrade_allowed(self, chart: HelmChart, current: SemVer, candidate: Optional[ChartVersion],
+                                 levels: List[str]) -> bool:
+        if candidate is None or candidate.semver <= current or candidate.semver.is_prerelease:
+            return False
+        if get_update_level(current, candidate.semver) not in levels:
+            return False
+        if self._helm_chart_state.is_ignored(chart.name, candidate.version):
+            return False
+        if self._helm_chart_state.is_failed(chart.name, candidate.version):
+            LOGGER.debug(f"Not upgrading '{chart.name}' to {candidate.version} automatically, "
+                         f"an upgrade to it failed before")
+            return False
+        return True
+
+    async def _auto_upgrade_helm_chart(self, chart: HelmChart, update: HelmChartUpdate, target: ChartVersion) -> bool:
+        """
+        Upgrades a chart without a button press: sets spec.version, notifies all chats and watches the install job
+        in the background, like an upgrade started from Telegram
+        :return: true if the upgrade was started, false if spec.version could not be set
+        """
+        name, version = chart.name, target.version
+        try:
+            await asyncio.to_thread(self._helm_chart_client.set_version, name, version)
+        except Exception as ex:
+            LOGGER.exception(ex)
+            # announce the update with buttons instead, without trying again on the next check
+            self._helm_chart_state.mark_failed(name, version)
+            for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
+                if not self._is_filtered_for(chat_id, chart.identifier):
+                    await self._send_helm_chart_report(
+                        self.bot, chat_id, None, f"Automatic upgrade of {name} to {version} failed: {ex}", None)
+            return False
+        LOGGER.info(f"Set version of HelmChart '{name}' from {chart.version} to {version} automatically")
+        HELM_CHART_ACTION_COUNTER.labels(action="auto_upgrade", name=name).inc()
+
+        text = helm_chart_auto_upgrade_to_str(chart, update, target)
+        menu = self._build_inline_keyboard({f"Upgrading to {version}...": BUTTON_DATA_NOTHING})
+        targets = []
+        for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
+            if self._is_filtered_for(chat_id, chart.identifier):
+                continue
+            try:
+                response = await send_message(self.bot, chat_id, text, parse_mode="HTML", menu=menu)
+                if isinstance(response, list):
+                    response = response[-1]
+                self._store.add_pending_upgrade(name, version, response.chat_id, response.message_id)
+                targets.append((response.chat_id, response.message_id))
+            except Exception as ex:
+                LOGGER.exception(ex)
+
+        task = asyncio.create_task(self._watch_helm_chart_upgrade(self.bot, chart, version, targets))
+        # a task without a reference can be garbage collected before it finished
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return True
 
     async def on_new_helm_chart_update(self, chart: HelmChart, item: HelmChartUpdate):
         """
@@ -999,7 +1097,7 @@ class KeelTelegramBot:
                 self._build_inline_keyboard({f"Upgrading to {version}...": BUTTON_DATA_NOTHING}))
             self._store.add_pending_upgrade(name, version, chat_id, message.message_id)
             context.application.create_task(
-                self._watch_helm_chart_upgrade(bot, chart, version, chat_id, message.message_id))
+                self._watch_helm_chart_upgrade(bot, chart, version, [(chat_id, message.message_id)]))
         except Exception as e:
             LOGGER.exception(e)
             await bot.answer_callback_query(query_id, text=f"Error: {e}"[:200])
@@ -1025,25 +1123,31 @@ class KeelTelegramBot:
             return f"Cannot upgrade {chart.name} from Telegram: {manual_reason}"
         return None
 
-    async def _watch_helm_chart_upgrade(self, bot, chart: HelmChart, version: str, chat_id: int, message_id: int):
+    async def _watch_helm_chart_upgrade(self, bot, chart: HelmChart, version: str,
+                                        messages: List[Tuple[int, int]]):
         """
-        Waits for the install job of a helm chart upgrade and reports the outcome as a reply to the notification
+        Waits for the install job of a helm chart upgrade and reports the outcome as a reply to the notifications
+        :param messages: (chat id, message id) of the notifications of this upgrade
         """
         try:
-            await self._report_helm_chart_upgrade(bot, chart, version, chat_id, message_id)
+            await self._report_helm_chart_upgrade(bot, chart, version, messages)
         finally:
-            self._store.remove_pending_upgrade(chat_id, message_id)
+            for chat_id, message_id in messages:
+                self._store.remove_pending_upgrade(chat_id, message_id)
 
-    async def _report_helm_chart_upgrade(self, bot, chart: HelmChart, version: str, chat_id: int, message_id: int):
+    async def _report_helm_chart_upgrade(self, bot, chart: HelmChart, version: str,
+                                         messages: List[Tuple[int, int]]):
         try:
             result = await asyncio.to_thread(
                 self._helm_chart_client.wait_for_install_job, chart, version,
                 self._config.HELM_CHARTS_JOB_TIMEOUT.value)
         except Exception as ex:
             LOGGER.exception(ex)
-            await send_message(bot, chat_id, f"Cannot watch upgrade of {chart.name} to {version}: {ex}",
-                               reply_to=message_id)
-            await self._set_helm_chart_button(bot, chat_id, message_id, f"Upgrade to {version} unknown")
+            self._mark_helm_chart_upgrade_failed(chart, version)
+            for chat_id, message_id in messages:
+                await self._send_helm_chart_report(
+                    bot, chat_id, message_id, f"Cannot watch upgrade of {chart.name} to {version}: {ex}", None)
+                await self._set_helm_chart_button(bot, chat_id, message_id, f"Upgrade to {version} unknown")
             return
 
         if result.status == InstallJobStatus.SUCCEEDED:
@@ -1056,11 +1160,32 @@ class KeelTelegramBot:
             title = f"Upgrade of {chart.name} to {version} timed out"
             button = f"Upgrade to {version} timed out"
 
+        if result.status != InstallJobStatus.SUCCEEDED:
+            self._mark_helm_chart_upgrade_failed(chart, version)
+
         lines = [f"<b>{html.escape(title)}</b>", html.escape(result.message)]
         if result.log_tail:
             lines.append(f"<pre>{html.escape(result.log_tail.strip()[-3000:])}</pre>")
-        await send_message(bot, chat_id, "\n".join(lines), parse_mode="HTML", reply_to=message_id)
-        await self._set_helm_chart_button(bot, chat_id, message_id, button)
+        for chat_id, message_id in messages:
+            await self._send_helm_chart_report(bot, chat_id, message_id, "\n".join(lines), "HTML")
+            await self._set_helm_chart_button(bot, chat_id, message_id, button)
+
+    @staticmethod
+    async def _send_helm_chart_report(bot, chat_id: int | str, message_id: Optional[int], text: str,
+                                      parse_mode: Optional[str]):
+        try:
+            await send_message(bot, chat_id, text, parse_mode=parse_mode, reply_to=message_id)
+        except Exception as ex:
+            # one chat failing must not keep the others from getting the report
+            LOGGER.exception(ex)
+
+    def _mark_helm_chart_upgrade_failed(self, chart: HelmChart, version: str):
+        """
+        Remembers a failed (or timed out, or unknown) upgrade, so the version is never upgraded automatically again
+        but announced with an "Upgrade" button instead
+        """
+        if self._helm_chart_state is not None:
+            self._helm_chart_state.mark_failed(chart.name, version)
 
     async def _set_helm_chart_button(self, bot, chat_id: int, message_id: int, button: str):
         try:
@@ -1072,24 +1197,27 @@ class KeelTelegramBot:
 
     async def _resume_helm_chart_upgrades(self):
         """
-        Picks up the upgrades that were started from Telegram before the last restart of the bot, so their
-        notification does not show "Upgrading to ..." forever
+        Picks up the upgrades that were started (from Telegram or automatically) before the last restart of the bot,
+        so their notification does not show "Upgrading to ..." forever
         """
         if self._helm_chart_client is None:
             return
+        # an automatic upgrade has one notification per chat, watch its job only once
+        upgrades: Dict[Tuple[str, str], List[Tuple[int, int]]] = {}
         for pending in self._store.pending_upgrades():
-            name, version = pending.name, pending.version
-            chat_id, message_id = pending.chat_id, pending.message_id
+            upgrades.setdefault((pending.name, pending.version), []).append((pending.chat_id, pending.message_id))
+        for (name, version), messages in upgrades.items():
             try:
                 chart = await asyncio.to_thread(self._helm_chart_client.get_helm_chart, name)
             except Exception as ex:
                 LOGGER.warning(f"Cannot resume the upgrade of '{name}' to {version}: {ex}")
-                await self._set_helm_chart_button(self.bot, chat_id, message_id, f"Upgrade to {version} unknown")
-                self._store.remove_pending_upgrade(chat_id, message_id)
+                for chat_id, message_id in messages:
+                    await self._set_helm_chart_button(self.bot, chat_id, message_id, f"Upgrade to {version} unknown")
+                    self._store.remove_pending_upgrade(chat_id, message_id)
                 continue
             LOGGER.info(f"Resuming to watch the upgrade of '{name}' to {version}")
             task = asyncio.create_task(
-                self._watch_helm_chart_upgrade(self.bot, chart, version, chat_id, message_id))
+                self._watch_helm_chart_upgrade(self.bot, chart, version, messages))
             # a task without a reference can be garbage collected before it finished
             self._background_tasks.add(task)
             task.add_done_callback(self._background_tasks.discard)
