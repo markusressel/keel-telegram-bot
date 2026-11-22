@@ -56,7 +56,7 @@ class HelmUpgradeResumeTest(TestBase):
         self.client.wait_for_install_job.return_value = InstallJobResult(InstallJobStatus.SUCCEEDED, "done", None)
 
         with patch("keel_telegram_bot.bot.send_message", new=AsyncMock()):
-            asyncio.run(self.bot._watch_helm_chart_upgrade(self.telegram, _chart(), "20.3.0", 123, 7))
+            asyncio.run(self.bot._watch_helm_chart_upgrade(self.telegram, _chart(), "20.3.0", [(123, 7)]))
 
         self.assertEqual(["Upgraded to 20.3.0"], self._buttons(self.telegram.edit_message_reply_markup.call_args))
         self.assertEqual([], self.store.pending_upgrades())
@@ -66,7 +66,7 @@ class HelmUpgradeResumeTest(TestBase):
         self.client.wait_for_install_job.side_effect = RuntimeError("cluster unreachable")
 
         with patch("keel_telegram_bot.bot.send_message", new=AsyncMock()):
-            asyncio.run(self.bot._watch_helm_chart_upgrade(self.telegram, _chart(), "20.3.0", 123, 7))
+            asyncio.run(self.bot._watch_helm_chart_upgrade(self.telegram, _chart(), "20.3.0", [(123, 7)]))
 
         self.assertEqual(["Upgrade to 20.3.0 unknown"],
                          self._buttons(self.telegram.edit_message_reply_markup.call_args))

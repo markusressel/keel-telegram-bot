@@ -51,6 +51,7 @@ checks the `HelmChart` objects (`helm.cattle.io/v1`) of the
   failure including the end of the job log. "Ignore" stops notifications about this version.
 * A major update is only announced, because it usually needs manual steps (CRD updates, upgrade notes).
   If there is a newer version within the current major version, the notification offers an upgrade to it.
+* Minor and patch updates can be upgraded automatically instead, see [Automatic upgrades](#automatic-upgrades).
 * Updates of HelmCharts in `helm_charts.notify_only` are only announced, with an "Ignore" button but no
   "Upgrade" button. The same applies automatically to charts that ship CRDs which helm does not upgrade,
   unless the HelmChart enables the chart's own CRD upgrade (`spec.set` or `spec.valuesContent`):
@@ -61,6 +62,42 @@ checks the `HelmChart` objects (`helm.cattle.io/v1`) of the
   afterwards, so its notification does not stay on "Upgrading to ..." forever.
 * Only users in `telegram.admin_usernames` can press the buttons, in one of the `telegram.chat_ids`.
   The per-chat `filters` apply to the identifier `helmchart/<targetNamespace>/<name>`.
+
+### Automatic upgrades
+
+`helm_charts.auto_upgrade` lists the update levels that are upgraded without pressing "Upgrade":
+
+```yaml
+keel-telegram-bot:
+  helm_charts:
+    enabled: true
+    # upgrade minor and patch updates automatically, majors are still only announced
+    auto_upgrade:
+      - minor
+      - patch
+    # optional: HelmCharts (by name) that keep the "Upgrade" button
+    auto_upgrade_exclude:
+      - loki
+```
+
+* The level is relative to the current version: `patch` is a newer version with the same major and minor
+  version (`1.2.3` -> `1.2.5`), `minor` one with the same major and a higher minor version (`1.2.3` -> `1.4.1`).
+  `major` is not accepted, the bot refuses to start with it. The default is an empty list: every upgrade
+  needs a button press.
+* The bot upgrades to the newest allowed version: with `minor`, the newest version within the current major
+  version; with only `patch`, the newest version within the current minor version. Newer versions that are
+  left (f.ex. a major update, or a minor update with only `patch` allowed) are announced as usual, relative
+  to the new version.
+* An automatic upgrade works like pressing "Upgrade": it sets `spec.version`, sends a notification
+  "Automatic helm chart upgrade" to each chat (respecting the `filters`), waits for the install job and replies
+  with the outcome, including the end of the job log on failure. It is watched again after a restart, too.
+* Never upgraded automatically: pre-releases, ignored versions, HelmCharts in `helm_charts.notify_only` or
+  `helm_charts.auto_upgrade_exclude`, charts with CRDs that are not upgraded (see above), charts that no chat
+  would be notified about, and charts with an upgrade still running.
+* A version whose upgrade failed, timed out or could not be watched (automatic or from Telegram) is never
+  upgraded automatically again. It stays in `spec.version`, so nothing is retried; if the HelmChart is set back
+  to an older version, the failed version is announced with an "Upgrade" button instead. A newer version is
+  upgraded automatically again. Failed versions are stored in `helm_charts.state_path` as well.
 
 The ServiceAccount of the bot needs the following permissions in the namespace of the HelmCharts:
 

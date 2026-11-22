@@ -57,7 +57,13 @@ keel-telegram-bot:
     # Names of HelmCharts whose updates are only announced, without an "Upgrade" button.
     # kube-prometheus-stack is treated like this automatically unless it sets crds.upgradeJob.enabled: true
     notify_only: []
-    # File to remember announced and ignored chart versions in, put it on a persistent volume
+    # Update levels that are upgraded automatically, without pressing "Upgrade": minor and/or patch,
+    # relative to the current version. Major updates are never upgraded automatically ("major" is rejected).
+    # Pre-releases, ignored versions, notify_only charts and versions whose upgrade failed before are not either.
+    auto_upgrade: []
+    # Names of HelmCharts that are never upgraded automatically, their updates keep the "Upgrade" button
+    auto_upgrade_exclude: []
+    # File to remember announced, ignored and failed chart versions in, put it on a persistent volume
     state_path: /app/data/helm-chart-state.json
     # Maximum time to wait for the helm-controller install job after an upgrade
     job_timeout: 10m

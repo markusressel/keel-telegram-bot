@@ -11,13 +11,15 @@ LOGGER = logging.getLogger(__name__)
 KEY_CHARTS = "charts"
 KEY_ANNOUNCED = "announced"
 KEY_IGNORED = "ignored"
+KEY_FAILED = "failed"
 
 
 class HelmChartState:
     """
-    Remembers which chart versions were already announced or ignored, persisted as a small JSON file:
+    Remembers which chart versions were already announced or ignored, and which upgrades failed,
+    persisted as a small JSON file:
 
-    {"charts": {"<helmchart name>": {"announced": ["1.2.3"], "ignored": ["2.0.0"]}}}
+    {"charts": {"<helmchart name>": {"announced": ["1.2.3"], "ignored": ["2.0.0"], "failed": ["1.2.2"]}}}
     """
 
     def __init__(self, path: str):
@@ -46,9 +48,24 @@ class HelmChartState:
     def ignore(self, name: str, versions: List[str]):
         self._add(name, KEY_IGNORED, versions)
 
+    def is_failed(self, name: str, version: str) -> bool:
+        """
+        :return: true if an upgrade to this version failed (or its outcome is unknown) before
+        """
+        with self._lock:
+            return version in self._get_entry(name)[KEY_FAILED]
+
+    def mark_failed(self, name: str, version: str):
+        """
+        Remembers that an upgrade to this version failed, so it is never upgraded automatically again
+        """
+        self._add(name, KEY_FAILED, [version])
+
     def prune(self, name: str, current_version: str):
         """
-        Forgets all versions that are not newer than the current version of a chart
+        Forgets all versions that are not newer than the current version of a chart. Failed versions are only
+        forgotten once the current version is newer: the version of a failed upgrade stays in spec.version, and
+        after resetting the chart to an older version it must not be upgraded automatically again.
         :param name: HelmChart name
         :param current_version: currently installed chart version
         """
@@ -60,14 +77,22 @@ class HelmChartState:
             parsed = SemVer.parse(version)
             return parsed is not None and parsed > current
 
+        def is_not_older(version: str) -> bool:
+            parsed = SemVer.parse(version)
+            return parsed is not None and parsed >= current
+
+        keep = {KEY_ANNOUNCED: is_newer, KEY_IGNORED: is_newer, KEY_FAILED: is_not_older}
+
         with self._lock:
             charts = self._data[KEY_CHARTS]
             entry = charts.get(name)
             if entry is None:
                 return
-            pruned = {key: [x for x in entry.get(key, []) if is_newer(x)] for key in (KEY_ANNOUNCED, KEY_IGNORED)}
-            if pruned == {key: entry.get(key, []) for key in (KEY_ANNOUNCED, KEY_IGNORED)}:
+            pruned = {key: [x for x in entry.get(key, []) if predicate(x)] for key, predicate in keep.items()}
+            if pruned == {key: entry.get(key, []) for key in keep}:
                 return
+            # keep files of older versions free of empty lists
+            pruned = {key: value for key, value in pruned.items() if value or key != KEY_FAILED}
             if any(pruned.values()):
                 charts[name] = pruned
             else:
@@ -89,6 +114,7 @@ class HelmChartState:
         return {
             KEY_ANNOUNCED: entry.get(KEY_ANNOUNCED, []),
             KEY_IGNORED: entry.get(KEY_IGNORED, []),
+            KEY_FAILED: entry.get(KEY_FAILED, []),
         }
 
     def _load(self) -> dict:

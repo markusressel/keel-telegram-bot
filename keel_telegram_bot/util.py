@@ -311,6 +311,28 @@ def helm_chart_update_to_str(chart: HelmChart, update: HelmChartUpdate, manual_r
     return "\n".join(lines)
 
 
+def helm_chart_auto_upgrade_to_str(chart: HelmChart, update: HelmChartUpdate, target: ChartVersion) -> str:
+    """
+    Formats the notification of an automatic helm chart upgrade (HTML)
+    :param chart: the HelmChart, still with the version before the upgrade
+    :param update: the update the upgrade belongs to
+    :param target: the version the chart is upgraded to
+    """
+    current = update.current
+    lines = [
+        f"<b>{html.escape(f'Automatic helm chart upgrade: {chart.name}')}</b>",
+        f"Release: {html.escape(chart.name)}",
+        f"Namespace: {html.escape(chart.target_namespace or chart.namespace)}",
+        f"Chart: {html.escape(chart.chart)} ({html.escape(chart.repo)})",
+        html.escape(f"Version: {update.current_version} -> {target.version}"),
+    ]
+    current_app_version = current.app_version if current is not None else None
+    if target.app_version and target.app_version != current_app_version:
+        lines.append(html.escape(f"App version: {current_app_version or '?'} -> {target.app_version}"))
+    lines.extend(_chart_version_details_to_lines(target, show_version=False))
+    return "\n".join(lines)
+
+
 def _chart_version_details_to_lines(version: ChartVersion, show_version: bool) -> List[str]:
     lines = []
     suffix = f" ({html.escape(version.version)})" if show_version else ""

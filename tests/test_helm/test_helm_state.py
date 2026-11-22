@@ -63,6 +63,32 @@ class HelmChartStateTest(TestBase):
         with open(self.path) as file:
             self.assertEqual({"charts": {}}, json.load(file))
 
+    def test_failed(self):
+        state = HelmChartState(self.path)
+        state.mark_failed("loki", "20.3.0")
+        self.assertTrue(state.is_failed("loki", "20.3.0"))
+        self.assertFalse(state.is_failed("loki", "20.3.1"))
+        self.assertFalse(state.is_failed("alloy", "20.3.0"))
+        # a failed version is still announced
+        self.assertTrue(state.should_announce("loki", ["20.3.0"]))
+        self.assertTrue(HelmChartState(self.path).is_failed("loki", "20.3.0"))
+
+    def test_prune_keeps_failed_version_while_installed_or_newer(self):
+        state = HelmChartState(self.path)
+        state.mark_failed("loki", "20.3.0")
+
+        # the failed version stays in spec.version
+        state.prune("loki", "20.3.0")
+        self.assertTrue(state.is_failed("loki", "20.3.0"))
+        # reset to an older version
+        state.prune("loki", "20.2.0")
+        self.assertTrue(state.is_failed("loki", "20.3.0"))
+
+        state.prune("loki", "20.3.1")
+        self.assertFalse(state.is_failed("loki", "20.3.0"))
+        with open(self.path) as file:
+            self.assertEqual({"charts": {}}, json.load(file))
+
     def test_corrupt_file(self):
         os.makedirs(os.path.dirname(self.path))
         with open(self.path, "w") as file:
