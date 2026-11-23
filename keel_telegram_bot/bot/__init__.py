@@ -6,7 +6,7 @@ import re
 from typing import Dict, List, Optional, Tuple
 
 from container_app_conf.formatter.toml import TomlFormatter
-from requests import HTTPError
+from requests import HTTPError, Timeout
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 from telegram.error import BadRequest, Forbidden, RetryAfter, TelegramError
 from telegram.ext import CommandHandler, filters, MessageHandler, CallbackQueryHandler, \
@@ -21,6 +21,8 @@ from keel_telegram_bot.bot.permissions import CONFIG_ADMINS, CONFIGURED_CHAT_ID
 from keel_telegram_bot.bot.reply_keyboard_handler import ReplyKeyboardHandler
 from keel_telegram_bot.client.api_client import KeelApiClient
 from keel_telegram_bot.client.approval import Approval
+from keel_telegram_bot.client.poll_result import PollBusyError, PollNotWatchedError, PollResult, \
+    PollUnsupportedError
 from keel_telegram_bot.client.resource import Resource
 from keel_telegram_bot.client.tracked_image import TrackedImage
 from keel_telegram_bot.client.types import SemverPolicy, Policy, PollSchedule, SemverPolicyType, Trigger
@@ -34,7 +36,7 @@ from keel_telegram_bot.helm.version import SemVer, get_update_level
 from keel_telegram_bot.stats import *
 from keel_telegram_bot.util import send_message, approval_to_str, approval_signature, resource_to_str, approval_button_data, parse_approval_button_data, \
     tracked_image_to_str, helm_chart_update_to_str, helm_chart_check_result_to_str, \
-    helm_chart_auto_upgrade_to_str
+    helm_chart_auto_upgrade_to_str, resource_identifier, poll_button_data, poll_results_to_str, image_repository
 
 LOGGER = logging.getLogger(__name__)
 
@@ -43,6 +45,8 @@ PERMANENT_EDIT_ERRORS = ("message to edit not found", "message can't be edited",
                          "chat not found")
 # edits that failed in a row for another reason, before the message is forgotten
 MAX_EDIT_FAILURES = 5
+# label of the button that polls the registry for the resource of a message
+BUTTON_TEXT_POLL = "Check now"
 
 
 class CustomErrorHandler(DefaultErrorHandler):
@@ -100,6 +104,9 @@ class KeelTelegramBot:
                 CommandHandler(COMMAND_UPDATE,
                                filters=(~ filters.REPLY) & (~ filters.FORWARDED),
                                callback=self._update_callback),
+                CommandHandler(COMMAND_POLL,
+                               filters=(~ filters.REPLY) & (~ filters.FORWARDED),
+                               callback=self._poll_callback),
                 CommandHandler(COMMAND_APPROVE,
                                filters=(~ filters.REPLY) & (~ filters.FORWARDED),
                                callback=self._approve_callback),
@@ -443,6 +450,136 @@ class KeelTelegramBot:
             update, context, identifier, choices=items, key=lambda x: x.identifier,
             callback=execute
         )
+
+    @COMMAND_TIME_POLL.time()
+    @command(name=COMMAND_POLL,
+             description="Check the registry for new versions now, instead of waiting for the poll schedule",
+             arguments=[
+                 Argument(name=["identifier", "i"],
+                          description="Resource identifier or part of its name, all watched images if not given",
+                          example="deployment/default/myapp", optional=True),
+             ],
+             error_handler=CustomErrorHandler(),
+             permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
+    async def _poll_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
+                             identifier: Optional[str]) -> None:
+        """
+        Asks Keel to poll the registry now, for all watched images or the images of one resource
+        """
+        await self._poll(update, context, identifier)
+
+    async def _poll(self, update: Update, context: ContextTypes.DEFAULT_TYPE, identifier: Optional[str]) -> None:
+        chat_id = update.effective_chat.id
+
+        async def execute(update: Update, context: ContextTypes.DEFAULT_TYPE, item: Optional[Resource], data: dict):
+            bot = context.bot
+            message = update.effective_message
+            chat_id = update.effective_chat.id
+            target = item.identifier if item is not None else None
+
+            if target is not None:
+                text = f"Polling {target}..."
+            else:
+                text = "Polling all watched images, this can take a minute..."
+            status_message = await send_message(bot, chat_id, text, reply_to=message.message_id,
+                                                menu=ReplyKeyboardRemove(selective=True))
+            KEEL_POLL_COUNTER.labels(source="command").inc()
+            # a poll can take a minute, which must not block the other commands and buttons
+            self._run_in_background(self._poll_and_report(bot, chat_id, target, status_message=status_message))
+
+        if identifier is None:
+            await execute(update, context, None, {})
+            return
+
+        items = self._api_client.get_resources()
+        items = list(filter(lambda x: not self._is_filtered_for(chat_id, x.identifier), items))
+
+        exact_matches = list(filter(lambda x: x.identifier == identifier, items))
+        if len(exact_matches) > 0:
+            await execute(update, context, exact_matches[0], {})
+            return
+
+        # then fuzzy match to "identifier"
+        await self._response_handler.await_user_selection(
+            update, context, identifier, choices=items, key=lambda x: x.identifier,
+            callback=execute,
+        )
+
+    async def _poll_and_report(self, bot, chat_id: int, identifier: Optional[str], status_message=None,
+                               reply_to: Optional[int] = None):
+        """
+        Polls and reports the result, by editing the status message, or else as a new message
+        :param identifier: resource identifier, None to poll all watched images
+        :param status_message: the "Polling ..." message to replace by the result
+        :param reply_to: message to reply to, if there is no status message
+        """
+        text = await self._run_poll(chat_id, identifier)
+        try:
+            if isinstance(status_message, list):
+                status_message = status_message[-1]
+            if status_message is not None:
+                try:
+                    await bot.edit_message_text(text[:4096], chat_id=status_message.chat_id,
+                                                message_id=status_message.message_id)
+                    return
+                except TelegramError as ex:
+                    LOGGER.warning(f"Cannot edit poll status message, sending the result instead: {ex}")
+                    reply_to = status_message.message_id
+            await send_message(bot, chat_id, text, reply_to=reply_to)
+        except Exception as ex:
+            LOGGER.exception(ex)
+
+    async def _run_poll(self, chat_id: int, identifier: Optional[str]) -> str:
+        """
+        Asks Keel to poll the registry
+        :param identifier: resource identifier, None to poll all watched images
+        :return: the summary to show
+        """
+        target = identifier or "all images"
+        try:
+            results = await asyncio.to_thread(self._api_client.poll, identifier)
+            if identifier is None:
+                results = await asyncio.to_thread(self._filter_poll_results, chat_id, results)
+        except PollUnsupportedError:
+            return ("Keel has no POST /v1/poll endpoint. Polling on demand needs a Keel build with it "
+                    "(f.ex. github.com/markusressel/keel).")
+        except PollNotWatchedError as ex:
+            return f"{target} is not watched by Keel's poll trigger: {ex}"
+        except PollBusyError:
+            return "Keel is polling all images already, try again in a minute."
+        except Timeout:
+            return (f"Keel did not answer in time while polling {target}. The poll may still be running, "
+                    f"updates and approvals arrive as usual.")
+        except HTTPError as ex:
+            LOGGER.error(ex)
+            if ex.response is None:
+                return f"Polling {target} failed: {ex}"
+            return f"Polling {target} failed: HTTP {ex.response.status_code} {ex.response.text.strip()[:200]}"
+        except Exception as ex:
+            LOGGER.exception(ex)
+            return f"Polling {target} failed: {ex}"
+
+        return poll_results_to_str(results, identifier)
+
+    def _filter_poll_results(self, chat_id: int, results: List[PollResult]) -> List[PollResult]:
+        """
+        Keeps only the images of resources that the chat may see, if it has filters
+        """
+        filters = self._config.TELEGRAM_FILTERS.value or []
+        if not any(map(lambda x: str(x["chat_id"]) == str(chat_id), filters)):
+            return results
+        visible = set()
+        for resource in self._api_client.get_resources():
+            if not self._is_filtered_for(chat_id, resource.identifier):
+                visible.update(map(image_repository, resource.images))
+        return list(filter(lambda x: image_repository(x.image) in visible, results))
+
+    def _run_in_background(self, coroutine):
+        task = asyncio.create_task(coroutine)
+        # a task without a reference can be garbage collected before it finished
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
 
     @COMMAND_TIME_APPROVE.time()
     @command(name=COMMAND_APPROVE,
@@ -845,6 +982,9 @@ class KeelTelegramBot:
             f"{type}",
             f"{message}",
         ])
+        # the identifier is the second line of the text, the "Check now" button reads it from there if it is
+        # too long for the button data
+        menu = self._build_inline_keyboard({BUTTON_TEXT_POLL: poll_button_data(resource_identifier(identifier))})
 
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
 
@@ -854,7 +994,7 @@ class KeelTelegramBot:
             await send_message(
                 self.bot, chat_id,
                 text, parse_mode="HTML",
-                menu=None
+                menu=menu
             )
 
     async def on_new_pending_approval(self, item: Approval) -> bool:
@@ -996,6 +1136,10 @@ class KeelTelegramBot:
             await self._helm_chart_button_callback(update, context)
             return
 
+        if data == BUTTON_DATA_POLL or data.startswith(BUTTON_DATA_POLL_PREFIX):
+            await self._poll_button_callback(update, context)
+            return
+
         try:
             action, approval_id = parse_approval_button_data(data)
             if approval_id is not None:
@@ -1045,6 +1189,52 @@ class KeelTelegramBot:
         except Exception as e:
             LOGGER.error(e)
             await bot.answer_callback_query(query_id, text=f"Unknown error")
+
+    async def _poll_button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        Handles the "Check now" button of approval requests and notifications: polls the registry for the
+        resource of the message and replies to it with the result
+        """
+        bot = context.bot
+        query = update.callback_query
+        query_id = query.id
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+
+        if not self._is_button_press_allowed(update):
+            await bot.answer_callback_query(query_id, text="You are not allowed to do this")
+            return
+
+        identifier = self._find_poll_identifier(chat_id, message.message_id, message.text or "", query.data)
+        if identifier is None:
+            await bot.answer_callback_query(query_id, text="Cannot tell which resource this is about, use /poll")
+            return
+        if self._is_filtered_for(chat_id, identifier):
+            await bot.answer_callback_query(query_id, text="You are not allowed to do this")
+            return
+
+        await bot.answer_callback_query(query_id, text=f"Checking {identifier}...")
+        KEEL_POLL_COUNTER.labels(source="button").inc()
+        self._run_in_background(self._poll_and_report(bot, chat_id, identifier, reply_to=message.message_id))
+
+    def _find_poll_identifier(self, chat_id: int, message_id: int, text: str, data: str) -> Optional[str]:
+        """
+        :return: the resource identifier of a "Check now" button: from its data, or else from the remembered
+        approval message or the text of the message
+        """
+        if data.startswith(BUTTON_DATA_POLL_PREFIX):
+            return data[len(BUTTON_DATA_POLL_PREFIX):]
+        stored = self._store.find(chat_id, message_id)
+        if stored is not None:
+            return resource_identifier(stored.identifier)
+        matches = re.search(r"^Identifier: (.*)", text, flags=re.MULTILINE)
+        if matches is not None:
+            return resource_identifier(matches.group(1).strip())
+        # notifications have the identifier in the second line
+        lines = text.splitlines()
+        if len(lines) >= 2 and re.fullmatch(r"[\w.-]+(/[\w.-]+)+(:[\w.-]+)?", lines[1].strip()):
+            return resource_identifier(lines[1].strip())
+        return None
 
     async def _helm_chart_button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
@@ -1273,6 +1463,7 @@ class KeelTelegramBot:
             if item.votesRequired > item.votesReceived:
                 keyboard_items["Approve"] = approval_button_data(BUTTON_DATA_APPROVE, item.id)
                 keyboard_items["Reject"] = approval_button_data(BUTTON_DATA_REJECT, item.id)
+                keyboard_items[BUTTON_TEXT_POLL] = poll_button_data(resource_identifier(item.identifier))
 
         return self._build_inline_keyboard(keyboard_items)
 
@@ -1337,10 +1528,16 @@ class KeelTelegramBot:
         """
         try:
             if text is None:
+                keyboard_items = {"Expired": BUTTON_DATA_NOTHING}
+                poll_data = poll_button_data(resource_identifier(message.identifier))
+                if poll_data != BUTTON_DATA_POLL:
+                    # without the identifier in the data, the button could not find it anymore: the message is
+                    # forgotten after this edit and its text does not show the identifier
+                    keyboard_items[BUTTON_TEXT_POLL] = poll_data
                 await self.bot.edit_message_reply_markup(
                     chat_id=message.chat_id,
                     message_id=message.message_id,
-                    reply_markup=self._build_inline_keyboard({"Expired": BUTTON_DATA_NOTHING}),
+                    reply_markup=self._build_inline_keyboard(keyboard_items),
                 )
             else:
                 await self.bot.edit_message_text(

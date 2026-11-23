@@ -10,9 +10,11 @@ from telegram import Bot, Message, LinkPreviewOptions
 from telegram._utils.types import ReplyMarkup
 
 from keel_telegram_bot.client.approval import Approval
+from keel_telegram_bot.client.poll_result import PollResult
 from keel_telegram_bot.client.resource import Resource
 from keel_telegram_bot.client.tracked_image import TrackedImage
 from keel_telegram_bot.config import Config
+from keel_telegram_bot.const import BUTTON_DATA_POLL, BUTTON_DATA_POLL_PREFIX, TELEGRAM_CALLBACK_DATA_LIMIT
 from keel_telegram_bot.helm.chart import HelmChart
 from keel_telegram_bot.helm.checker import HelmChartCheckResult
 from keel_telegram_bot.helm.index import HelmChartUpdate, ChartVersion
@@ -163,6 +165,87 @@ def parse_approval_button_data(data: str) -> Tuple[Optional[str], Optional[str]]
     """
     action, _, approval_id = data.partition(":")
     return action, (approval_id or None)
+
+
+def resource_identifier(identifier: str) -> str:
+    """
+    :return: the resource identifier of an approval identifier, which ends with the new version,
+    f.ex. "deployment/default/myapp" for "deployment/default/myapp:1.2.3"
+    """
+    name, _, version = identifier.rpartition(":")
+    if name and "/" not in version:
+        return name
+    return identifier
+
+
+def poll_button_data(identifier: str) -> str:
+    """
+    Data of the "Check now" button. The identifier is left out if it does not fit into the 64 bytes that
+    Telegram allows, the button handler then takes it from the message.
+    :param identifier: resource identifier
+    """
+    data = BUTTON_DATA_POLL_PREFIX + identifier
+    if len(data.encode("utf-8")) > TELEGRAM_CALLBACK_DATA_LIMIT:
+        return BUTTON_DATA_POLL
+    return data
+
+
+def poll_result_to_str(result: PollResult) -> str:
+    """
+    One line of a poll result
+    """
+    if result.error:
+        return f"{result.image}: error: {result.error}"
+    if result.submitted:
+        tag = f" ({result.tag})" if result.tag else ""
+        return f"{result.image}: newer version found{tag}, update or approval follows"
+    return f"{result.image}: up to date"
+
+
+def poll_results_to_str(results: List[PollResult], target: Optional[str] = None) -> str:
+    """
+    Summary of a poll. For a single resource every image is listed; for a poll of all images only the images
+    with a newer version or an error, plus the number of images that are up to date.
+    :param results: results of the poll
+    :param target: the polled resource or image, None for a poll of all images
+    """
+    if target is not None:
+        if len(results) == 0:
+            return f"Polled {target}: no images"
+        if len(results) == 1:
+            return f"Polled {target}:\n{poll_result_to_str(results[0])}"
+        return "\n".join([f"Polled {target}:"] + [poll_result_to_str(x) for x in results])
+
+    if len(results) == 0:
+        return "Polled all images: nothing is watched by the poll trigger"
+    found = [x for x in results if x.submitted and not x.error]
+    errors = [x for x in results if x.error]
+    up_to_date = len(results) - len(found) - len(errors)
+    counts = [f"{len(found)} newer"]
+    if len(errors) > 0:
+        counts.append(f"{len(errors)} failed")
+    counts.append(f"{up_to_date} up to date")
+    lines = [f"Polled {len(results)} images: {', '.join(counts)}"]
+    lines.extend(poll_result_to_str(x) for x in found + errors)
+    return "\n".join(lines)
+
+
+def image_repository(image: str) -> str:
+    """
+    :return: the repository of an image reference without tag, digest and the implicit Docker Hub parts,
+    f.ex. "memcached" for "docker.io/library/memcached:1.6"
+    """
+    image = image.split("@", 1)[0]
+    name, _, tag = image.rpartition(":")
+    if name and "/" not in tag:
+        image = name
+    for prefix in ("index.docker.io/", "docker.io/", "registry-1.docker.io/"):
+        if image.startswith(prefix):
+            image = image[len(prefix):]
+            break
+    if image.startswith("library/"):
+        image = image[len("library/"):]
+    return image
 
 
 def approval_to_str(data: Approval, detailed: bool = False) -> str:

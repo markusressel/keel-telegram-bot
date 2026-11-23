@@ -17,6 +17,8 @@
 * [x] Permission handling based on telegram usernames
 * [x] Filter visible approvals on a per-chat basis
 * [x] Helm chart updates for HelmChart objects of the k3s helm-controller (optional)
+* [x] Check the registry for new image versions on demand (`/poll`, "Check now" button), needs a Keel build
+      with `POST /v1/poll`
 
 # How it works
 
@@ -158,8 +160,45 @@ than one is required or some were given) and the expiry time. The approval id is
 so the message does not need to show it. `/approvals` and the other commands list all properties
 (id, identifier, versions, votes, expiry).
 
+Approval requests (while pending) and Keel notifications have a "Check now" button, see
+[Polling on demand](#polling-on-demand).
+
 Times are shown in the local time zone of the bot. Set the `TZ` environment variable (f.ex.
 `TZ=Europe/Berlin`), the default is UTC.
+
+## Polling on demand
+
+Keel checks the registry of a workload only on its poll schedule (`keel.sh/pollSchedule`, often once a day).
+`/poll` asks Keel to check now:
+
+* `/poll` checks all images watched by Keel's poll trigger. This can take up to a minute. The reply lists only
+  the images with a newer version or an error, and counts the ones that are up to date:
+  ```
+  Polled 23 images: 1 newer, 1 failed, 21 up to date
+  ghcr.io/music-assistant/server: newer version found (2.5.0), update or approval follows
+  ghcr.io/example/app: error: unauthorized
+  ```
+* `/poll <identifier>` checks the images of one resource. Part of a name works too (f.ex. `/poll music`), the
+  bot then offers the matching resources to pick from, like `/update`.
+  ```
+  Polled deployment/homeassistant/music-assistant:
+  ghcr.io/music-assistant/server: up to date
+  ```
+* The "Check now" button of a pending approval request and of a Keel notification checks the resource of that
+  message and replies to it with the result.
+
+A newer version found is handed to Keel, which then updates the workload or asks for approval as usual, so the
+update notification or approval request follows as its own message.
+
+Only users in `telegram.admin_usernames` can use the command and the button, in one of the
+`telegram.chat_ids`, and the per-chat `filters` apply.
+
+This needs a Keel build with the `POST /v1/poll` endpoint, f.ex. the fork
+[markusressel/keel](https://github.com/markusressel/keel); upstream Keel does not have it.
+Against a Keel without it, the bot replies "Keel has no POST /v1/poll endpoint...". A resource or image that is
+not watched by Keel's poll trigger (f.ex. a workload with `keel.sh/trigger: default` and no poll schedule) gets
+"... is not watched by Keel's poll trigger". While a check of all images is running, another one is refused
+until it is done.
 
 ## Database
 

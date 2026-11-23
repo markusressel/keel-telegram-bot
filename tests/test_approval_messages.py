@@ -236,7 +236,8 @@ class UpdateMessagesTest(TestBase):
 
         self.telegram.edit_message_text.assert_not_called()
         menu = self.telegram.edit_message_reply_markup.call_args.kwargs["reply_markup"]
-        self.assertEqual(["Expired"], [b.text for row in menu.inline_keyboard for b in row])
+        self.assertEqual(["Expired", "Check now"], [b.text for row in menu.inline_keyboard for b in row])
+        self.assertEqual("p:deployment/ns/app", menu.inline_keyboard[1][0].callback_data)
         self.assertEqual([], self.state.all())
 
     def test_failure_in_one_chat_does_not_stop_the_others(self):
