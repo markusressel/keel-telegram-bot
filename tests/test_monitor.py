@@ -18,6 +18,7 @@ class MonitorTest(TestBase):
         self.api = Mock(spec=KeelApiClient)
         self.bot = Mock(spec=KeelTelegramBot)
         self.bot.update_messages = AsyncMock()
+        self.bot.close_stale_self_approvals_once = AsyncMock()
         self.bot.on_new_pending_approval = AsyncMock(return_value=True)
         self.store = Store()
         self.monitor = Monitor(config, self.api, self.bot, self.store)
@@ -48,3 +49,16 @@ class MonitorTest(TestBase):
         self.api.get_approvals.return_value = []
         self._run()
         self.assertFalse(self.store.is_announced("a1", 1))
+
+    def test_checks_stale_offers_of_keel_itself_before_announcing(self):
+        calls = []
+        self.bot.close_stale_self_approvals_once.side_effect = lambda: calls.append("stale")
+        self.api.get_approvals.side_effect = lambda **kwargs: calls.append("approvals") or []
+        self._run()
+        self.assertEqual(["stale", "approvals"], calls)
+
+    def test_failed_stale_check_does_not_stop_the_run(self):
+        self.bot.close_stale_self_approvals_once.side_effect = RuntimeError("keel not up yet")
+        self.api.get_approvals.return_value = [_approval("a1")]
+        self._run()
+        self.bot.update_messages.assert_called_once()

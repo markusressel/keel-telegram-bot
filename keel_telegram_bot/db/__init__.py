@@ -11,7 +11,8 @@ from alembic.config import Config as AlembicConfig
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
 
-from keel_telegram_bot.db.tables import approval_messages, announced_approvals, helm_pending_upgrades, meta
+from keel_telegram_bot.db.tables import approval_messages, announced_approvals, helm_pending_upgrades, meta, \
+    deferred_approvals
 
 LOGGER = logging.getLogger(__name__)
 
@@ -41,6 +42,26 @@ class PendingHelmUpgrade:
     version: str
     chat_id: int
     message_id: int
+
+
+# where an approval was deferred: the button of its notification, or the /approve command
+DEFERRAL_SOURCE_BUTTON = "button"
+DEFERRAL_SOURCE_COMMAND = "command"
+
+
+@dataclass
+class DeferredApproval:
+    """
+    An approval of Keel's own workload that is sent to Keel once the work in progress of the bot is done
+    """
+    approval_id: str
+    identifier: str
+    voter: str
+    # the work that was in progress, f.ex. "the loki 20.3.0 upgrade"
+    reason: str
+    chat_id: int
+    message_id: int
+    source: str
 
 
 def _now() -> datetime:
@@ -223,3 +244,48 @@ class Store:
         with self._engine.connect() as conn:
             rows = conn.execute(sa.select(helm_pending_upgrades)).all()
         return [PendingHelmUpgrade(r.name, r.version, r.chat_id, r.message_id) for r in rows]
+
+    # deferred approvals
+
+    def add_deferral(self, deferral: DeferredApproval):
+        """
+        Remembers a deferred approval. An approval that is deferred already keeps its first entry.
+        :return: the deferral that is stored now
+        """
+        with self._lock, self._engine.begin() as conn:
+            known = conn.execute(sa.select(deferred_approvals).where(
+                deferred_approvals.c.approval_id == deferral.approval_id)).first()
+            if known is not None:
+                return self._to_deferral(known)
+            conn.execute(sa.insert(deferred_approvals).values(
+                approval_id=deferral.approval_id, identifier=deferral.identifier, voter=deferral.voter,
+                reason=deferral.reason, chat_id=deferral.chat_id, message_id=deferral.message_id,
+                source=deferral.source, created_at=_now()))
+        return deferral
+
+    def get_deferral(self, approval_id: str) -> Optional[DeferredApproval]:
+        with self._engine.connect() as conn:
+            row = conn.execute(sa.select(deferred_approvals).where(
+                deferred_approvals.c.approval_id == approval_id)).first()
+        return self._to_deferral(row) if row else None
+
+    def deferrals(self) -> List[DeferredApproval]:
+        with self._engine.connect() as conn:
+            rows = conn.execute(sa.select(deferred_approvals).order_by(deferred_approvals.c.created_at)).all()
+        return [self._to_deferral(x) for x in rows]
+
+    def remove_deferral(self, approval_id: str) -> bool:
+        """
+        Forgets a deferred approval. Whoever removes it, sends (or drops) it, so it is never sent twice.
+        :return: True if it was removed now, False if it was not deferred (anymore)
+        """
+        with self._lock, self._engine.begin() as conn:
+            result = conn.execute(sa.delete(deferred_approvals).where(
+                deferred_approvals.c.approval_id == approval_id))
+        return result.rowcount > 0
+
+    @staticmethod
+    def _to_deferral(row) -> DeferredApproval:
+        return DeferredApproval(approval_id=row.approval_id, identifier=row.identifier, voter=row.voter,
+                                reason=row.reason, chat_id=row.chat_id, message_id=row.message_id,
+                                source=row.source)

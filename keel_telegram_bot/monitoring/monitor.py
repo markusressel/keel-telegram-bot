@@ -25,6 +25,12 @@ class Monitor(RegularIntervalWorker):
         """
         Called repeatedly
         """
+        try:
+            # once after the start: offers of the image Keel runs already, f.ex. after Keel was restarted by hand
+            await self._bot.close_stale_self_approvals_once()
+        except Exception as ex:
+            LOGGER.warning(f"Cannot check the approvals of Keel's own workload, trying again: {ex}")
+
         active = self._api_client.get_approvals(rejected=False, archived=False)
 
         try:
