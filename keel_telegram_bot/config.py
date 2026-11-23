@@ -164,6 +164,21 @@ class Config(ConfigBase):
         secret=True
     )
 
+    KEEL_SELF_IDENTIFIER = StringConfigEntry(
+        description="Resource identifier of Keel's own workload (\"<kind>/<namespace>/<name>\"), whose pod the "
+                    "bot runs in. Approving an update of it restarts Keel and the bot, so such an approval waits "
+                    "until running Helm chart upgrades and polls are done, and an offer of the image that is "
+                    "running already is closed. Empty to turn both off.",
+        key_path=[
+            NODE_MAIN,
+            NODE_KEEL,
+            "self_identifier"
+        ],
+        default="deployment/keel/keel",
+        example="deployment/keel/keel",
+        required=False,
+    )
+
     MONITOR_INTERVAL = TimeDeltaConfigEntry(
         description="Interval to check for new pending approvals",
         key_path=[

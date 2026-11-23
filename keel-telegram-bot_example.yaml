@@ -19,6 +19,10 @@ keel-telegram-bot:
     username: myuser
     # Password to use when authenticating with Keel
     password: mypassword
+    # Resource identifier of Keel's own workload, whose pod the bot runs in. Approving an update of it
+    # restarts Keel and the bot: the approval waits for running Helm chart upgrades and polls, and an
+    # offer of the image that is running already is closed. Empty to turn this off
+    self_identifier: deployment/keel/keel
 
   # Approval Monitor specific configuration options
   monitor:

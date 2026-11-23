@@ -19,6 +19,8 @@
 * [x] Helm chart updates for HelmChart objects of the k3s helm-controller (optional)
 * [x] Check the registry for new image versions on demand (`/poll`, "Check now" button), needs a Keel build
       with `POST /v1/poll`
+* [x] Updates of Keel itself: an approval waits for running Helm chart upgrades and polls, offers of the
+      image that runs already are closed
 
 # How it works
 
@@ -200,11 +202,105 @@ not watched by Keel's poll trigger (f.ex. a workload with `keel.sh/trigger: defa
 "... is not watched by Keel's poll trigger". While a check of all images is running, another one is refused
 until it is done.
 
+## Updates of Keel itself
+
+The bot usually runs as a second container in the pod of Keel (see [Kubernetes](#kubernetes)). When Keel
+watches its own workload, approving an update of it makes Keel patch its own Deployment, which restarts the pod:
+Keel and the bot. `keel.self_identifier` names that workload (default `deployment/keel/keel`, the resource
+identifier as in `/resources`; empty turns the two features below off):
+
+```yaml
+keel-telegram-bot:
+  keel:
+    self_identifier: deployment/keel/keel
+```
+
+### Deferred approval
+
+A restart interrupts what the bot is doing: a Helm chart upgrade it watches (started from Telegram or
+automatically) and a `/poll` or "Check now" in progress. So when an approval of Keel's own workload is approved
+while one of these runs, the bot does not send it to Keel yet:
+
+* The "Approve" button answers "Deferred until the loki 20.3.0 upgrade finishes" and replaces the buttons of the
+  message by that text, "Approve now anyway" and "Reject".
+* `/approve <id>` replies "Deferred until the loki 20.3.0 upgrade finishes: approving
+  deployment/keel/keel:latest restarts Keel and this bot. The approval is sent to Keel as soon as that is done,
+  /approve <id> --force sends it now."
+
+As soon as nothing runs anymore (an upgrade counts as done when it succeeded, failed or timed out), the bot sends
+the approval to Keel with the name of the admin who approved it, and says so: "Sending the deferred approval of
+deployment/keel/keel:latest to Keel: the loki 20.3.0 upgrade finished." (a reply to the approval message, or
+the reply to `/approve` is edited). The approval message then follows the approval as usual.
+
+The deferral is kept in the [database](#database), so it survives a restart of the bot: a Helm chart upgrade is
+watched again after a restart and the approval follows when it is done; a poll ends with the restart, so an
+approval that only waited for a poll is sent right after it. If the approval is rejected, approved some other
+way, deleted or expires meanwhile, the deferral is dropped with "Dropped the deferred approval of
+deployment/keel/keel:latest: the approval expired or was deleted." (or "was rejected", "was approved already").
+
+"Approve now anyway" and `/approve <id> --force` approve at once and drop the deferral.
+
+### Offers of the image that runs already
+
+Keel can offer an image that it runs already, f.ex. when Keel was restarted (and pulled `latest` again) before
+the approval was answered. Approving it would only restart Keel and the bot. The bot compares the digest the
+approval offers (from the event that created it) with the digest of the image the Keel container of its pod runs,
+and if they are the same, it deletes the approval in Keel and marks the message "Already running, closed". It
+checks this when a new approval of Keel's own workload arrives, and once after its start for the approvals that
+are pending then. If either digest is unknown, the approval is left alone.
+
+The bot reads its own pod from the Kubernetes API for that. The pod is found by the environment variables
+`POD_NAME` and `POD_NAMESPACE`, or else by `HOSTNAME` (the pod name, unless the pod sets `hostname`) and the
+namespace of the ServiceAccount. The ServiceAccount of the pod needs `get` on pods in its namespace. Keel's own
+ClusterRole has it already (Keel deletes pods for force updates); otherwise add a Role:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: keel-telegram-bot-self
+  namespace: keel
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: keel-telegram-bot-self
+  namespace: keel
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: keel-telegram-bot-self
+subjects:
+  - kind: ServiceAccount
+    name: keel
+    namespace: keel
+```
+
+To set the pod explicitly (f.ex. with `hostname` in the pod spec), pass it with the downward API:
+
+```yaml
+  - name: telegram-bot
+    env:
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+      - name: POD_NAMESPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+```
+
 ## Database
 
 The bot keeps a little state in a database: the Telegram messages of approval notifications (so their buttons
 follow the approval, also after a restart), which approval was announced in which chat (so an approval that
-appeared while the bot was down is announced afterwards, and none twice) and running Helm chart upgrades.
+appeared while the bot was down is announced afterwards, and none twice), running Helm chart upgrades and
+[deferred approvals](#deferred-approval) of Keel itself.
 
 `database.url` is a [SQLAlchemy URL](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls):
 
@@ -273,7 +369,8 @@ volumes:
 ```
 
 For Helm chart updates the ServiceAccount of the pod needs the RBAC rules from
-[Helm chart updates](#helm-chart-updates).
+[Helm chart updates](#helm-chart-updates). To close offers of the image Keel runs already, it needs `get` on
+pods, see [Updates of Keel itself](#updates-of-keel-itself).
 
 # Contributing
 

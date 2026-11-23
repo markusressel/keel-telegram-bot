@@ -16,7 +16,8 @@ from telegram_click.decorator import command
 from telegram_click.error_handler import DefaultErrorHandler
 
 from keel_telegram_bot import util
-from keel_telegram_bot.db import ApprovalMessage, Store
+from keel_telegram_bot.db import ApprovalMessage, Store, DeferredApproval, DEFERRAL_SOURCE_BUTTON, \
+    DEFERRAL_SOURCE_COMMAND
 from keel_telegram_bot.bot.permissions import CONFIG_ADMINS, CONFIGURED_CHAT_ID
 from keel_telegram_bot.bot.reply_keyboard_handler import ReplyKeyboardHandler
 from keel_telegram_bot.client.api_client import KeelApiClient
@@ -24,6 +25,7 @@ from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.client.poll_result import PollBusyError, PollNotWatchedError, PollResult, \
     PollUnsupportedError
 from keel_telegram_bot.client.resource import Resource
+from keel_telegram_bot.client.self_pod import SelfPodClient
 from keel_telegram_bot.client.tracked_image import TrackedImage
 from keel_telegram_bot.client.types import SemverPolicy, Policy, PollSchedule, SemverPolicyType, Trigger
 from keel_telegram_bot.config import Config
@@ -36,7 +38,8 @@ from keel_telegram_bot.helm.version import SemVer, get_update_level
 from keel_telegram_bot.stats import *
 from keel_telegram_bot.util import send_message, approval_to_str, approval_signature, resource_to_str, approval_button_data, parse_approval_button_data, \
     tracked_image_to_str, helm_chart_update_to_str, helm_chart_check_result_to_str, \
-    helm_chart_auto_upgrade_to_str, resource_identifier, poll_button_data, poll_results_to_str, image_repository
+    helm_chart_auto_upgrade_to_str, resource_identifier, poll_button_data, poll_results_to_str, image_repository, \
+    approval_new_digest, approval_repository
 
 LOGGER = logging.getLogger(__name__)
 
@@ -47,6 +50,12 @@ PERMANENT_EDIT_ERRORS = ("message to edit not found", "message can't be edited",
 MAX_EDIT_FAILURES = 5
 # label of the button that polls the registry for the resource of a message
 BUTTON_TEXT_POLL = "Check now"
+# label of the button that approves an update of Keel's own workload without waiting for the work in progress
+BUTTON_TEXT_APPROVE_ANYWAY = "Approve now anyway"
+# label of an approval of Keel's own workload whose image is running already
+BUTTON_TEXT_ALREADY_RUNNING = "Already running, closed"
+# voter name of the approvals the bot closes by itself
+BOT_VOTER = "keel-telegram-bot"
 
 
 class CustomErrorHandler(DefaultErrorHandler):
@@ -64,7 +73,8 @@ class KeelTelegramBot:
                  helm_chart_client: Optional[HelmChartClient] = None,
                  helm_chart_checker: Optional[HelmChartUpdateChecker] = None,
                  helm_chart_state: Optional[HelmChartState] = None,
-                 store: Optional[Store] = None):
+                 store: Optional[Store] = None,
+                 self_pod: Optional[SelfPodClient] = None):
         """
         Creates an instance.
         :param config: configuration object
@@ -73,6 +83,7 @@ class KeelTelegramBot:
         :param helm_chart_state: announced/ignored helm chart versions, None if helm chart updates are disabled
         :param store: persistent state (approval messages, announced approvals, running helm chart upgrades),
         None to remember it only until the next restart
+        :param self_pod: reads the pod of the bot (and Keel), to tell which image Keel runs. None if unknown
         """
         self._config = config
         self._api_client = api_client
@@ -80,7 +91,12 @@ class KeelTelegramBot:
         self._helm_chart_checker = helm_chart_checker
         self._helm_chart_state = helm_chart_state
         self._store = store or Store()
+        self._self_pod = self_pod
         self._background_tasks = set()
+        # polls that are running now, see _poll_and_report()
+        self._running_polls = 0
+        # whether the approvals of Keel's own workload were checked for stale offers since the start
+        self._stale_check_done = False
 
         self._response_handler = ReplyKeyboardHandler()
 
@@ -168,6 +184,12 @@ class KeelTelegramBot:
         await self._app.start()
         await self._app.updater.start_polling()
         await self._resume_helm_chart_upgrades()
+        try:
+            # approvals that were deferred until a poll finished, which the restart ended. Keel may not answer
+            # yet right after the start of the pod, the monitor tries again on every run.
+            await self.process_deferred_approvals()
+        except Exception as ex:
+            LOGGER.warning(f"Cannot process deferred approvals, trying again later: {ex}")
 
     def stop(self):
         """
@@ -513,7 +535,12 @@ class KeelTelegramBot:
         :param status_message: the "Polling ..." message to replace by the result
         :param reply_to: message to reply to, if there is no status message
         """
-        text = await self._run_poll(chat_id, identifier)
+        # an approval of Keel's own workload waits for running polls, see _work_in_progress()
+        self._running_polls += 1
+        try:
+            text = await self._run_poll(chat_id, identifier)
+        finally:
+            self._running_polls -= 1
         try:
             if isinstance(status_message, list):
                 status_message = status_message[-1]
@@ -528,6 +555,8 @@ class KeelTelegramBot:
             await send_message(bot, chat_id, text, reply_to=reply_to)
         except Exception as ex:
             LOGGER.exception(ex)
+        finally:
+            await self._on_work_finished()
 
     async def _run_poll(self, chat_id: int, identifier: Optional[str]) -> str:
         """
@@ -588,11 +617,14 @@ class KeelTelegramBot:
                  Argument(name=["identifier", "i"], description="Approval identifier or id",
                           example="default/myimage:1.5.5"),
                  Argument(name=["voter", "v"], description="Name of voter", example="john", optional=True),
+                 Flag(name=["force", "f"],
+                      description="Approve an update of Keel itself now, instead of waiting for running "
+                                  "Helm chart upgrades and polls"),
              ],
              error_handler=CustomErrorHandler(),
              permissions=CONFIGURED_CHAT_ID & CONFIG_ADMINS)
     async def _approve_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE,
-                                identifier: str, voter: Optional[str]) -> None:
+                                identifier: str, voter: Optional[str], force: bool = False) -> None:
         """
         Approve a pending item
         """
@@ -606,6 +638,23 @@ class KeelTelegramBot:
             message = update.effective_message
             chat_id = update.effective_chat.id
 
+            work = self._work_in_progress() if self._is_self(item.identifier) and not force else []
+            if len(work) > 0:
+                what = self._describe_work(work)
+                text = (f"{self._deferred_text(what)}: approving {item.identifier} restarts Keel and this bot. "
+                        f"The approval is sent to Keel as soon as that is done, "
+                        f"/approve {item.id} --force sends it now.")
+                response = await send_message(bot, chat_id, text, reply_to=message.message_id,
+                                              menu=ReplyKeyboardRemove(selective=True))
+                if isinstance(response, list):
+                    response = response[-1]
+                self._store.add_deferral(DeferredApproval(
+                    approval_id=item.id, identifier=item.identifier, voter=voter, reason=what,
+                    chat_id=response.chat_id, message_id=response.message_id, source=DEFERRAL_SOURCE_COMMAND))
+                KEEL_APPROVAL_ACTION_COUNTER.labels(action="defer", identifier=item.identifier).inc()
+                return
+
+            self._store.remove_deferral(item.id)
             self._api_client.approve(item.id, item.identifier, voter)
             text = f"Approved {item.identifier}"
             await send_message(bot, chat_id, text, reply_to=message.message_id,
@@ -1010,14 +1059,24 @@ class KeelTelegramBot:
         menu = self.create_approval_notification_menu(item)
         sent = False
 
+        chat_ids = []
         for chat_id in self._config.TELEGRAM_CHAT_IDS.value:
-
             if self._is_filtered_for(chat_id, identifier):
                 LOGGER.debug(f"Skipping new pending approval for chat '{chat_id}' due to filters")
                 continue
             if self._store.is_announced(item.id, int(chat_id)):
                 continue
+            chat_ids.append(chat_id)
+        if len(chat_ids) == 0:
+            return False
 
+        # an offer of the image Keel runs already: approving it would only restart Keel and the bot
+        closed = self._is_self(identifier) and await self._is_offer_running(item) is True \
+            and await self._close_stale_approval(item)
+        if closed:
+            menu = self._build_inline_keyboard({BUTTON_TEXT_ALREADY_RUNNING: BUTTON_DATA_NOTHING})
+
+        for chat_id in chat_ids:
             LOGGER.debug(f"Sending pending approval message to '{chat_id}'")
             try:
                 response = await send_message(
@@ -1025,7 +1084,8 @@ class KeelTelegramBot:
                     text, parse_mode="HTML",
                     menu=menu
                 )
-                self._register_message(response.chat_id, response.message_id, item)
+                if not closed:
+                    self._register_message(response.chat_id, response.message_id, item)
                 self._store.mark_announced(item.id, int(chat_id))
                 sent = True
             except Exception as ex:
@@ -1162,7 +1222,14 @@ class KeelTelegramBot:
             self._store.register(update.effective_chat.id, update.effective_message.message_id,
                                              approval_id, approval_identifier)
 
-            if action == BUTTON_DATA_APPROVE:
+            if action == BUTTON_DATA_APPROVE or action == BUTTON_DATA_APPROVE_FORCE:
+                if action == BUTTON_DATA_APPROVE:
+                    answer_text = await self._defer_button_approval(update, approval_id, approval_identifier,
+                                                                    from_user.full_name)
+                    if answer_text is not None:
+                        await context.bot.answer_callback_query(query_id, text=answer_text[:200])
+                        return
+                self._store.remove_deferral(approval_id)
                 self._api_client.approve(approval_id, approval_identifier, from_user.full_name)
                 answer_text = f"Approved '{approval_identifier}'"
                 KEEL_APPROVAL_ACTION_COUNTER.labels(action="approve", identifier=approval_identifier).inc()
@@ -1324,6 +1391,7 @@ class KeelTelegramBot:
         finally:
             for chat_id, message_id in messages:
                 self._store.remove_pending_upgrade(chat_id, message_id)
+            await self._on_work_finished()
 
     async def _report_helm_chart_upgrade(self, bot, chart: HelmChart, version: str,
                                          messages: List[Tuple[int, int]]):
@@ -1480,6 +1548,17 @@ class KeelTelegramBot:
 
     async def update_messages(self):
         """
+        Fetch approvals and update existing approval messages accordingly, then send or drop deferred approvals
+        of Keel's own workload.
+        """
+        await self._refresh_approval_messages()
+        try:
+            await self.process_deferred_approvals()
+        except Exception as ex:
+            LOGGER.exception(ex)
+
+    async def _refresh_approval_messages(self):
+        """
         Fetch approvals and update existing approval messages accordingly.
         A message is only edited when the approval changed since the message was last written, because edits
         are rate limited by Telegram and an unchanged message is refused with "message is not modified".
@@ -1567,6 +1646,227 @@ class KeelTelegramBot:
             LOGGER.warning(f"Cannot update message {message.message_id} in chat {message.chat_id} "
                            f"(attempt {failures} of {MAX_EDIT_FAILURES}): {ex}")
             self._store.update(message, failures=failures)
+
+    # Keel's own workload: approving an update of it restarts the pod of Keel and the bot
+
+    def _is_self(self, identifier: str) -> bool:
+        """
+        :param identifier: approval or resource identifier
+        :return: True if it is Keel's own workload (keel.self_identifier)
+        """
+        self_identifier = self._config.KEEL_SELF_IDENTIFIER.value
+        if not isinstance(self_identifier, str) or not self_identifier.strip():
+            return False
+        return resource_identifier(identifier) == self_identifier.strip()
+
+    def _work_in_progress(self) -> List[str]:
+        """
+        :return: what the bot is doing that a restart would interrupt, f.ex. ["the loki 20.3.0 upgrade", "a poll"]
+        """
+        work = []
+        if self._helm_chart_client is not None:
+            # upgrades started from Telegram or automatically, until their install job is done
+            for upgrade in self._store.pending_upgrades():
+                text = f"the {upgrade.name} {upgrade.version} upgrade"
+                if text not in work:
+                    work.append(text)
+        if self._running_polls > 0:
+            work.append("a poll")
+        return work
+
+    @staticmethod
+    def _describe_work(work: List[str]) -> str:
+        if len(work) == 1:
+            return work[0]
+        return ", ".join(work[:-1]) + " and " + work[-1]
+
+    @staticmethod
+    def _deferred_text(what: str) -> str:
+        verb = "finish" if " and " in what else "finishes"
+        return f"Deferred until {what} {verb}"
+
+    async def _defer_button_approval(self, update: Update, approval_id: str, identifier: str,
+                                     voter: str) -> Optional[str]:
+        """
+        Defers the approval of an "Approve" button if it is one of Keel's own workload and the bot has work in
+        progress, and replaces the buttons of the message by the deferral and "Approve now anyway"
+        :return: the answer to the button press if the approval was deferred, None to approve it now
+        """
+        if not self._is_self(identifier):
+            return None
+        work = self._work_in_progress()
+        if len(work) == 0:
+            return None
+        what = self._describe_work(work)
+        message = update.effective_message
+        self._store.add_deferral(DeferredApproval(
+            approval_id=approval_id, identifier=identifier, voter=voter, reason=what,
+            chat_id=update.effective_chat.id, message_id=message.message_id, source=DEFERRAL_SOURCE_BUTTON))
+        KEEL_APPROVAL_ACTION_COUNTER.labels(action="defer", identifier=identifier).inc()
+        try:
+            await message.edit_reply_markup(self._build_inline_keyboard({
+                self._deferred_text(what): BUTTON_DATA_NOTHING,
+                BUTTON_TEXT_APPROVE_ANYWAY: approval_button_data(BUTTON_DATA_APPROVE_FORCE, approval_id),
+                "Reject": approval_button_data(BUTTON_DATA_REJECT, approval_id),
+            }))
+        except Exception as ex:
+            LOGGER.warning(f"Cannot show the deferral of {identifier}: {ex}")
+        return f"{self._deferred_text(what)}, approving restarts Keel and this bot"
+
+    async def _on_work_finished(self):
+        """
+        Called when a Helm chart upgrade or a poll is done: sends the deferred approvals if nothing else runs
+        """
+        try:
+            if len(self._work_in_progress()) == 0:
+                await self.process_deferred_approvals()
+        except Exception as ex:
+            LOGGER.exception(ex)
+
+    async def process_deferred_approvals(self):
+        """
+        Drops the deferred approvals that were decided, deleted or expired meanwhile, and sends the others to Keel
+        if the bot has no work in progress anymore
+        """
+        deferrals = self._store.deferrals()
+        if len(deferrals) == 0:
+            return
+        approvals = {x.id: x for x in self._api_client.get_approvals()}
+
+        pending = []
+        for deferral in deferrals:
+            approval = approvals.get(deferral.approval_id)
+            reason = None
+            if approval is None:
+                reason = "the approval expired or was deleted"
+            elif approval.rejected:
+                reason = "the approval was rejected"
+            elif approval.archived or approval.votesReceived >= approval.votesRequired:
+                reason = "the approval was approved already"
+            if reason is None:
+                pending.append(deferral)
+            elif self._store.remove_deferral(deferral.approval_id):
+                LOGGER.info(f"Dropped the deferred approval of {deferral.identifier}: {reason}")
+                await self._report_deferral(deferral, f"Dropped the deferred approval of {deferral.identifier}: "
+                                                      f"{reason}.")
+
+        if len(pending) == 0 or len(self._work_in_progress()) > 0:
+            return
+
+        sent = False
+        for deferral in pending:
+            # whoever removes it sends it, so it is sent once also if two runs overlap
+            if not self._store.remove_deferral(deferral.approval_id):
+                continue
+            LOGGER.info(f"Sending the deferred approval of {deferral.identifier}, {deferral.reason} finished")
+            # tell first: Keel restarts the pod of the bot right after the approval
+            await self._report_deferral(deferral, f"Sending the deferred approval of {deferral.identifier} "
+                                                  f"to Keel: {deferral.reason} finished.")
+            try:
+                self._api_client.approve(deferral.approval_id, deferral.identifier, deferral.voter)
+                KEEL_APPROVAL_ACTION_COUNTER.labels(action="approve", identifier=deferral.identifier).inc()
+                sent = True
+            except Exception as ex:
+                LOGGER.exception(ex)
+                await self._report_deferral(deferral, f"Sending the deferred approval of {deferral.identifier} "
+                                                      f"to Keel failed: {ex}")
+        if sent:
+            await self._refresh_approval_messages()
+
+    async def _report_deferral(self, deferral: DeferredApproval, text: str):
+        """
+        Tells what became of a deferred approval: edits the reply to /approve, or replies to the approval
+        notification whose button deferred it (its buttons follow the approval)
+        """
+        try:
+            if deferral.source == DEFERRAL_SOURCE_COMMAND:
+                try:
+                    await self.bot.edit_message_text(text, chat_id=deferral.chat_id, message_id=deferral.message_id)
+                    return
+                except TelegramError as ex:
+                    LOGGER.warning(f"Cannot edit the deferral message, replying instead: {ex}")
+            await send_message(self.bot, deferral.chat_id, text, reply_to=deferral.message_id)
+        except Exception as ex:
+            LOGGER.exception(ex)
+
+    async def _is_offer_running(self, item: Approval) -> Optional[bool]:
+        """
+        Compares the digest an approval of Keel's own workload offers with the digest of the image Keel runs
+        :return: True if Keel runs the offered image already, False if not, None if either digest is unknown
+        """
+        if self._self_pod is None:
+            return None
+        new_digest = approval_new_digest(item)
+        if new_digest is None:
+            return None
+        repository = approval_repository(item)
+        if repository is not None:
+            repositories = {repository}
+        else:
+            try:
+                resource = await asyncio.to_thread(self._api_client.get_resource, resource_identifier(item.identifier))
+            except Exception as ex:
+                LOGGER.warning(f"Cannot find the images of {item.identifier}: {ex}")
+                return None
+            if resource is None:
+                return None
+            repositories = set(map(image_repository, resource.images))
+        running = await asyncio.to_thread(self._self_pod.running_digests, repositories)
+        if running is None:
+            return None
+        return new_digest in running
+
+    async def _close_stale_approval(self, item: Approval) -> bool:
+        """
+        Deletes an approval of Keel's own workload whose image Keel runs already, drops its deferral and marks its
+        messages as closed
+        :return: True if it was deleted
+        """
+        try:
+            await asyncio.to_thread(self._api_client.delete, item.id, item.identifier, BOT_VOTER)
+        except Exception as ex:
+            LOGGER.warning(f"Cannot close the approval {item.identifier}, whose image is running already: {ex}")
+            return False
+        LOGGER.info(f"Closed the approval {item.identifier} ({item.id}), its image is running already")
+        KEEL_APPROVAL_ACTION_COUNTER.labels(action="close_stale", identifier=item.identifier).inc()
+
+        deferral = self._store.get_deferral(item.id)
+        if deferral is not None and self._store.remove_deferral(item.id):
+            await self._report_deferral(deferral, f"Dropped the deferred approval of {item.identifier}: "
+                                                  f"Keel runs the offered image already.")
+        for message in self._store.all():
+            if message.approval_id != item.id:
+                continue
+            try:
+                await self.bot.edit_message_reply_markup(
+                    chat_id=message.chat_id, message_id=message.message_id,
+                    reply_markup=self._build_inline_keyboard({BUTTON_TEXT_ALREADY_RUNNING: BUTTON_DATA_NOTHING}))
+            except Exception as ex:
+                LOGGER.warning(f"Cannot mark message {message.message_id} in chat {message.chat_id} as closed: {ex}")
+            self._store.remove(message)
+        return True
+
+    async def close_stale_self_approvals_once(self):
+        """
+        Closes stale offers of Keel's own workload once after the start of the bot. Run by the monitor until it
+        worked, because Keel may not answer yet when the pod starts.
+        """
+        if self._stale_check_done:
+            return
+        await self._close_stale_self_approvals()
+        self._stale_check_done = True
+
+    async def _close_stale_self_approvals(self):
+        """
+        Closes the pending approvals of Keel's own workload whose image Keel runs already, f.ex. because Keel was
+        restarted and pulled the same tag before the approval was answered
+        """
+        if self._self_pod is None:
+            return
+        approvals = self._api_client.get_approvals(rejected=False, archived=False)
+        for item in approvals:
+            if self._is_self(item.identifier) and await self._is_offer_running(item) is True:
+                await self._close_stale_approval(item)
 
     def _is_button_press_allowed(self, update: Update) -> bool:
         """

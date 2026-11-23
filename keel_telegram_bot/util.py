@@ -178,6 +178,47 @@ def resource_identifier(identifier: str) -> str:
     return identifier
 
 
+def _approval_event_repository(data: Approval) -> dict:
+    event = data.event
+    if isinstance(event, dict) and isinstance(event.get("repository"), dict):
+        return event["repository"]
+    return {}
+
+
+def approval_new_digest(data: Approval) -> Optional[str]:
+    """
+    :return: the digest of the image an approval offers, None if unknown. Keel leaves the "digest" of an
+    approval empty, the poll trigger puts it into the repository of the event that created the approval.
+    """
+    digest = data.digest or _approval_event_repository(data).get("digest")
+    return digest or None
+
+
+def approval_repository(data: Approval) -> Optional[str]:
+    """
+    :return: the image repository of an approval (from the event that created it), f.ex. "ghcr.io/me/app",
+    None if unknown
+    """
+    name = _approval_event_repository(data).get("name")
+    return image_repository(name) if name else None
+
+
+DIGEST_PATTERN = re.compile(r"^[a-z0-9]+(?:[.+_-][a-z0-9]+)*:[a-zA-Z0-9=_-]{32,}$")
+
+
+def parse_image_id(image_id: Optional[str]) -> Optional[str]:
+    """
+    :return: the digest of the imageID of a container status, which comes in runtime specific forms
+    ("docker-pullable://repo@sha256:...", "repo@sha256:...", "sha256:..."), None if it has none
+    """
+    if not image_id:
+        return None
+    if "://" in image_id:
+        image_id = image_id.split("://", 1)[1]
+    image_id = image_id.rsplit("@", 1)[-1]
+    return image_id if DIGEST_PATTERN.match(image_id) else None
+
+
 def poll_button_data(identifier: str) -> str:
     """
     Data of the "Check now" button. The identifier is left out if it does not fit into the 64 bytes that

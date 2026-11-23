@@ -35,6 +35,23 @@ helm_pending_upgrades = sa.Table(
     sa.Column("created_at", sa.DateTime, nullable=False),
 )
 
+# Approvals of Keel's own workload that an admin approved while the bot had work in progress (a Helm chart
+# upgrade it watches, a poll). Approving restarts the pod of Keel and the bot, so they are sent to Keel only
+# when that work is done.
+deferred_approvals = sa.Table(
+    "deferred_approvals", metadata,
+    sa.Column("approval_id", sa.String(255), primary_key=True),
+    sa.Column("identifier", sa.String(1024), nullable=False),
+    sa.Column("voter", sa.String(255), nullable=False),
+    # the work that was in progress when the approval was deferred, f.ex. "the loki 20.3.0 upgrade"
+    sa.Column("reason", sa.String(1024), nullable=False),
+    # the message that shows the deferral: the approval notification (button) or the reply to /approve (command)
+    sa.Column("chat_id", sa.BigInteger, nullable=False),
+    sa.Column("message_id", sa.BigInteger, nullable=False),
+    sa.Column("source", sa.String(16), nullable=False),
+    sa.Column("created_at", sa.DateTime, nullable=False),
+)
+
 # small key/value facts about the database itself
 meta = sa.Table(
     "meta", metadata,

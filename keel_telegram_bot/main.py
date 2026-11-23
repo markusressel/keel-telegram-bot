@@ -8,6 +8,7 @@ from prometheus_client import start_http_server
 
 from keel_telegram_bot.bot import KeelTelegramBot
 from keel_telegram_bot.client.api_client import KeelApiClient
+from keel_telegram_bot.client.self_pod import SelfPodClient
 from keel_telegram_bot.config import Config
 from keel_telegram_bot.db import Store
 from keel_telegram_bot.helm.checker import HelmChartUpdateChecker
@@ -61,7 +62,11 @@ def main():
 
     store = Store(config.DATABASE_URL.value)
 
-    bot = KeelTelegramBot(config, api_client, helm_chart_client, helm_chart_checker, helm_chart_state, store)
+    # the pod of Keel and the bot, to tell which image Keel runs (keel.self_identifier)
+    self_pod = SelfPodClient() if config.KEEL_SELF_IDENTIFIER.value else None
+
+    bot = KeelTelegramBot(config, api_client, helm_chart_client, helm_chart_checker, helm_chart_state, store,
+                          self_pod)
     monitor = Monitor(config, api_client, bot, store)
     server = WebsocketServer(config, bot)
 

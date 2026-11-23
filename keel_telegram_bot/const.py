@@ -30,6 +30,8 @@ CANCEL_KEYBOARD_COMMAND = "/cancel_keyboard"
 BUTTON_DATA_NOTHING = "_"
 BUTTON_DATA_APPROVE = "a"
 BUTTON_DATA_REJECT = "r"
+# "Approve now anyway": approves an approval of Keel's own workload without waiting for the work in progress
+BUTTON_DATA_APPROVE_FORCE = "af"
 # helm chart buttons, followed by the chart version(s): "hu:1.2.3", "hi:2.0.0,1.3.0"
 BUTTON_DATA_HELM_UPGRADE_PREFIX = "hu:"
 BUTTON_DATA_HELM_IGNORE_PREFIX = "hi:"
