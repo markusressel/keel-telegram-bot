@@ -4,14 +4,17 @@ from collections import namedtuple
 from typing import List, Optional
 
 import requests
+from requests import HTTPError
 from requests.auth import HTTPBasicAuth
 
 from keel_telegram_bot.client.approval import Approval
 from keel_telegram_bot.client.daily_stats import DailyStats
+from keel_telegram_bot.client.poll_result import PollResult, PollBusyError, PollNotWatchedError, \
+    PollUnsupportedError
 from keel_telegram_bot.client.resource import Resource
 from keel_telegram_bot.client.tracked_image import TrackedImage
 from keel_telegram_bot.client.types import Action, Provider, Trigger, Policy, PollSchedule
-from keel_telegram_bot.const import REQUESTS_TIMEOUT
+from keel_telegram_bot.const import REQUESTS_TIMEOUT, POLL_REQUESTS_TIMEOUT
 
 LOGGER = logging.getLogger(__name__)
 
@@ -203,12 +206,67 @@ class KeelApiClient:
         result = self._do_request(HttpMethod.GET, self._base_url + "/v1/stats")
         return DailyStats.from_dict(result)
 
+    def poll(self, identifier: Optional[str] = None, image: Optional[str] = None) -> List[PollResult]:
+        """
+        Asks Keel to poll the registry now, instead of waiting for the poll schedule.
+        Needs a Keel build with the POST /v1/poll endpoint. A newer version found is handed to Keel, which
+        then updates or asks for approval as usual. This can take up to a minute.
+        :param identifier: resource identifier (as in /v1/resources), f.ex. "deployment/default/myapp"
+        :param image: image repository, f.ex. "ghcr.io/me/myapp"
+        (neither identifier nor image: poll all watched images)
+        :return: one result per polled image
+        :raises PollNotWatchedError: the resource or image is not watched by the poll trigger
+        :raises PollBusyError: a poll of all images is running already
+        :raises PollUnsupportedError: Keel has no POST /v1/poll endpoint
+        """
+        if identifier is not None and image is not None:
+            raise ValueError("Use either identifier or image, not both")
+        body = {}
+        if identifier is not None:
+            body["identifier"] = identifier
+        if image is not None:
+            body["image"] = image
+
+        try:
+            response = self._do_request(HttpMethod.POST, self._base_url + "/v1/poll", json=body,
+                                        timeout=POLL_REQUESTS_TIMEOUT)
+        except HTTPError as ex:
+            status = ex.response.status_code
+            error = self._get_error_message(ex.response)
+            if status == 404:
+                if error is None:
+                    # the route itself does not exist, a plain "404 page not found" of the router
+                    raise PollUnsupportedError("Keel has no POST /v1/poll endpoint") from ex
+                raise PollNotWatchedError(error) from ex
+            if status == 405:
+                raise PollUnsupportedError("Keel has no POST /v1/poll endpoint") from ex
+            if status == 429:
+                raise PollBusyError(error or "A poll of all images is running already") from ex
+            raise
+
+        results = (response or {}).get("results") or []
+        return [PollResult.from_dict(x) for x in results]
+
+    @staticmethod
+    def _get_error_message(response) -> Optional[str]:
+        """
+        :return: the "error" of a JSON error response, None if the response is not one
+        """
+        try:
+            data = response.json()
+        except ValueError:
+            return None
+        if isinstance(data, dict) and isinstance(data.get("error"), str):
+            return data["error"]
+        return None
+
     def _do_request(
         self,
         method: HttpMethod = HttpMethod.GET,
         url: str = "/",
         params: dict = None,
-        json: dict = None
+        json: dict = None,
+        timeout=REQUESTS_TIMEOUT,
     ) -> Optional[list | dict]:
         """
         Executes an http request based on the given parameters
@@ -217,12 +275,13 @@ class KeelApiClient:
         :param url: the url to use
         :param params: query parameters that will be appended to the url
         :param json: request body
+        :param timeout: (connect, read) timeout in seconds
         :return: the response parsed as a json
         """
         headers = []
         url = self._create_request_url(url, params)
 
-        response = method.method(url, headers=headers, auth=self._auth, json=json, timeout=REQUESTS_TIMEOUT)
+        response = method.method(url, headers=headers, auth=self._auth, json=json, timeout=timeout)
 
         if response.status_code >= 400:
             LOGGER.debug("Request to %s returned status code %s: %s", url, response.status_code, response.text)

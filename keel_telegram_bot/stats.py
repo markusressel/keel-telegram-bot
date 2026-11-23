@@ -11,6 +11,7 @@ COMMAND_TIME_LIST_RESOURCES = COMMAND_TIME.labels(command=COMMAND_LIST_RESOURCES
 COMMAND_TIME_LIST_TRACKED = COMMAND_TIME.labels(command=COMMAND_LIST_TRACKED[0])
 COMMAND_TIME_LIST_APPROVALS = COMMAND_TIME.labels(command=COMMAND_LIST_APPROVALS[0])
 COMMAND_TIME_UPDATE = COMMAND_TIME.labels(command=COMMAND_UPDATE[0])
+COMMAND_TIME_POLL = COMMAND_TIME.labels(command=COMMAND_POLL[0])
 COMMAND_TIME_APPROVE = COMMAND_TIME.labels(command=COMMAND_APPROVE[0])
 COMMAND_TIME_REJECT = COMMAND_TIME.labels(command=COMMAND_REJECT[0])
 COMMAND_TIME_DELETE = COMMAND_TIME.labels(command=COMMAND_DELETE[0])
@@ -31,6 +32,7 @@ REST_TIME_WEBHOOK = REST_TIME.labels(endpoint=ENDPOINT_WEBHOOK)
 KEEL_NOTIFICATION_COUNTER = Counter('keel_notifications', 'Counts notifications received from keel')
 KEEL_APPROVAL_ACTION_COUNTER = Counter('keel_approval_action_counter',
                                        'Counts approval notificaion actions', ['action', 'identifier'])
+KEEL_POLL_COUNTER = Counter('keel_poll', 'Counts on-demand registry polls requested from Telegram', ['source'])
 HELM_CHART_UPDATE_COUNTER = Counter('helm_chart_update', 'Counts helm chart update notifications sent by this bot')
 HELM_CHART_ACTION_COUNTER = Counter('helm_chart_action_counter',
                                     'Counts helm chart notification actions', ['action', 'name'])
