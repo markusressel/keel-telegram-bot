@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from keel_telegram_bot.bot import KeelTelegramBot
@@ -26,6 +27,7 @@ class HelmChartMonitor(RegularIntervalWorker):
         """
         Called repeatedly
         """
-        results = self._checker.check()
+        # fetches the repository indexes, which takes a few seconds
+        results = await asyncio.to_thread(self._checker.check)
         notified = await self._bot.on_helm_chart_check_results(results)
         LOGGER.debug(f"Checked {len(results)} HelmChart(s), sent {len(notified)} update notification(s)")

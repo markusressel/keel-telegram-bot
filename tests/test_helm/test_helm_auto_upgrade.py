@@ -13,6 +13,7 @@ from keel_telegram_bot.helm.client import HelmChartClient, InstallJobResult, Ins
 from keel_telegram_bot.helm.index import ChartVersion, find_update
 from keel_telegram_bot.helm.state import HelmChartState
 from keel_telegram_bot.helm.version import SemVer
+from keel_telegram_bot.monitoring.helm_chart_monitor import HelmChartMonitor
 from tests import TestBase
 
 CHAT_ID = 12345678
@@ -283,6 +284,32 @@ class HelmAutoUpgradeTest(TestBase):
         self.client.wait_for_install_job.assert_called_once()
         self.assertEqual({1, 2}, {call.args[1] for call in self.send_message.call_args_list})
         self.assertEqual([], self.store.pending_upgrades())
+
+    def test_monitor_reports_automatic_upgrade(self):
+        # the watcher of the upgrade has to finish after the check that started it, or the upgrade stays pending:
+        # no report in Telegram, and approvals of Keel's own workload stay deferred
+        config = MagicMock()
+        config.HELM_CHARTS_INTERVAL.value = timedelta(hours=24)
+        checker = Mock(spec=HelmChartUpdateChecker)
+        checker.check.return_value = [_result(_chart(), "20.2.1", "20.3.0")]
+        monitor = HelmChartMonitor(config, checker, self.bot)
+
+        async def run():
+            with patch("keel_telegram_bot.bot.send_message", new=self.send_message):
+                task = asyncio.create_task(monitor.start())
+                deadline = asyncio.get_running_loop().time() + 5
+                while len(self._texts()) < 2 or len(self.store.pending_upgrades()) > 0:
+                    self.assertLess(asyncio.get_running_loop().time(), deadline, "upgrade was not reported")
+                    await asyncio.sleep(0.01)
+                monitor.stop()
+                await asyncio.wait_for(task, timeout=5)
+
+        asyncio.run(run())
+
+        self.client.set_version.assert_called_once_with("loki", "20.3.0")
+        notification, report = self._texts()
+        self.assertIn("Upgraded loki to 20.3.0", report)
+        self.assertEqual(MESSAGE_ID, self.send_message.call_args_list[1].kwargs["reply_to"])
 
 
 class HelmAutoUpgradeConfigTest(TestBase):
