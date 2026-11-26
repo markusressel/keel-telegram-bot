@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from keel_telegram_bot.bot import KeelTelegramBot
@@ -31,7 +32,7 @@ class Monitor(RegularIntervalWorker):
         except Exception as ex:
             LOGGER.warning(f"Cannot check the approvals of Keel's own workload, trying again: {ex}")
 
-        active = self._api_client.get_approvals(rejected=False, archived=False)
+        active = await asyncio.to_thread(self._api_client.get_approvals, rejected=False, archived=False)
 
         try:
             # update existing messages

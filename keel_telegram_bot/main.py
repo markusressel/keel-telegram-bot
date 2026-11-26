@@ -70,13 +70,19 @@ def main():
     monitor = Monitor(config, api_client, bot, store)
     server = WebsocketServer(config, bot)
 
+    monitors = [monitor]
+    if helm_chart_checker is not None:
+        monitors.append(HelmChartMonitor(config, helm_chart_checker, bot))
+
+    async def start_bot_and_monitors():
+        # the monitors send Telegram messages, so the bot has to be started first
+        await bot.start()
+        await asyncio.gather(*[x.start() for x in monitors])
+
     workers = [
-        bot.start(),
-        monitor.start(),
+        start_bot_and_monitors(),
         server.start(),
     ]
-    if helm_chart_checker is not None:
-        workers.append(HelmChartMonitor(config, helm_chart_checker, bot).start())
 
     tasks = asyncio.gather(*workers)
 
